@@ -1,0 +1,25 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,130.44,130.44,$/month,
+electric,energy,,0.0,0.0,1.0,3.0,0.0,6.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,1.0,3.0,6.0,10.0,0.0,4.0,0.07793,0.07793,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,1.0,3.0,10.0,18.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,1.0,3.0,18.0,22.0,0.0,4.0,0.07793,0.07793,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,1.0,3.0,22.0,24.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,4.0,10.0,0.0,12.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,4.0,10.0,12.0,21.0,0.0,4.0,0.07793,0.07793,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,4.0,10.0,21.0,24.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,11.0,12.0,0.0,6.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,11.0,12.0,6.0,10.0,0.0,4.0,0.07793,0.07793,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,11.0,12.0,10.0,18.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,11.0,12.0,18.0,22.0,0.0,4.0,0.07793,0.07793,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,11.0,12.0,22.0,24.0,0.0,4.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,energy,,0.0,0.0,1.0,12.0,0.0,24.0,5.0,6.0,0.05413,0.05413,$/kWh,Includes fuel cost and environmental charge
+electric,demand,winter-peak1,0.0,0.0,1.0,3.0,6.0,10.0,0.0,4.0,7.14,7.14,$/kW,
+electric,demand,winter-peak1,0.0,0.0,1.0,3.0,18.0,22.0,0.0,4.0,7.14,7.14,$/kW,
+electric,demand,summer-peak,0.0,0.0,4.0,10.0,12.0,21.0,0.0,4.0,7.14,7.14,$/kW,
+electric,demand,winter-peak2,0.0,0.0,11.0,12.0,6.0,10.0,0.0,4.0,7.14,7.14,$/kW,
+electric,demand,winter-peak2,0.0,0.0,11.0,12.0,18.0,22.0,0.0,4.0,7.14,7.14,$/kW,
+electric,demand,off-peak,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,5.329999999999999,5.329999999999999,$/kW,
+gas,customer,,,,,,,,,,420.0,420.0,$/month,
+gas,energy,,0.0,0.0,1.0,2.0,0.0,24.0,0.0,6.0,1.11781,0.39475152559611254,$/therm or $/m3,Includes cost of gas
+gas,energy,,0.0,0.0,3.0,12.0,0.0,24.0,0.0,6.0,1.2542,0.4429172787885637,$/therm or $/m3,Includes cost of gas

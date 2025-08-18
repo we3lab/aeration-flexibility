@@ -1,3 +1,21 @@
+# Project-specific
+aeration_flexibility/output_data
+aeration_flexibility/output_plots
+aeration_flexibility/__pycache__/
+aeration_flexibility/helpers/__pycache__/
+aeration_flexibility/data/facility/air/preprocessing
+aeration_flexibility/data/facility/o2/preprocessing
+aeration_flexibility/data/billing/reference/
+aeration_flexibility/local
+aeration_flexibility/cache/
+
+*daily_*
+*scada_*
+*RawData*
+*_power*
+**.xls
+**.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

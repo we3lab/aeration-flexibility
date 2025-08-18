@@ -1,0 +1,626 @@
+{
+  "nodes": [
+    "EBMUD",
+    "PowerGrid1",
+    "PowerGrid2"
+  ],
+  "connections": [
+    "PowerGrid1ToFacility",
+    "PowerGrid1ToVirtualDemand",
+    "PowerGrid2ToFacility",
+    "PowerGrid2ToVirtualDemand"
+  ],
+  "virtual_tags": {},
+  "PowerGrid1ToFacility": {
+    "type": "Wire",
+    "source": "PowerGrid1",
+    "destination": "EBMUD",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "entry_point": "null",
+    "tags": {
+      "W17NP1151_1F_PLC1_RD": {
+        "units": "kilowatt",
+        "source_unit_id": "total",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    },
+    "virtual_tags": {}
+  },
+  "PowerGrid1ToVirtualDemand": {
+    "type": "Wire",
+    "source": "PowerGrid1",
+    "destination": "EBMUD",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "entry_point": "VirtualDemand",
+    "tags": {},
+    "virtual_tags": {
+      "PowerGrid1_EBMUD_Electricity_Flow": {
+        "units": "kilowatt",
+        "tags": [
+          "W17NP1151_1F_PLC1_RD"
+        ],
+        "unary_operations": "noop",
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    }
+  },
+  "PowerGrid2ToFacility": {
+    "type": "Wire",
+    "source": "PowerGrid2",
+    "destination": "EBMUD",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "entry_point": "null",
+    "tags": {
+      "W17NP1107_1F_PLC1_RD": {
+        "units": "kilowatt",
+        "source_unit_id": "total",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    },
+    "virtual_tags": {}
+  },
+  "PowerGrid2ToVirtualDemand": {
+    "type": "Wire",
+    "source": "PowerGrid2",
+    "destination": "EBMUD",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "entry_point": "VirtualDemand",
+    "tags": {},
+    "virtual_tags": {
+      "PowerGrid2_EBMUD_Electricity_Flow": {
+        "units": "kilowatt",
+        "tags": [
+          "W17NP1107_1F_PLC1_RD"
+        ],
+        "unary_operations": "noop",
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    }
+  },
+  "LiftPumpToPrimary": {
+    "type": "Pipe",
+    "source": "LiftPump",
+    "destination": "PrimaryClarifier",
+    "contents": "UntreatedSewage",
+    "bidirectional": false,
+    "flowrate": {
+      "design": null,
+      "units": "MGD",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "pressure": {
+      "min": null,
+      "max": null,
+      "design": null,
+      "units": "MPa"
+    },
+    "tags": {
+      "AFY600A": {
+        "units": "MGD",
+        "source_unit_id": "total",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "UntreatedSewage"
+      }
+    },
+    "virtual_tags": {}
+  },
+  "PrimaryToAerator": {
+    "type": "Pipe",
+    "source": "PrimaryClarifier",
+    "destination": "AerationBasin",
+    "contents": "PrimaryEffluent",
+    "bidirectional": false,
+    "flowrate": {
+      "design": null,
+      "units": "MGD",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "pressure": {
+      "min": null,
+      "max": null,
+      "design": null,
+      "units": "MPa"
+    },
+    "tags": {},
+    "virtual_tags": {}
+  },
+  "CogenToFacility": {
+    "type": "Wire",
+    "source": "Cogenerator",
+    "destination": "VirtualDemand",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "tags": {
+      "ADDED_NET_PGS1_ENG_PWR": {
+        "units": "kilowatt",
+        "source_unit_id": "1",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "Electricity"
+      },
+      "ADDED_NET_PGS2_TURB_PWR": {
+        "units": "kilowatt",
+        "source_unit_id": "2",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    },
+    "virtual_tags": {
+      "NET_GENERATION": {
+        "units": "kilowatt",
+        "tags": [
+          "ADDED_NET_PGS1_ENG_PWR",
+          "ADDED_NET_PGS2_TURB_PWR"
+        ],
+        "custom_operations": "lambda tag1, tag2: tag1 + tag2",
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    }
+  },
+  "CompressorToVirtualDemand": {
+    "type": "Wire",
+    "source": "O2PlantCompressor",
+    "destination": "VirtualDemand",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "tags": {},
+    "virtual_tags": {
+      "Compressor_VirtualDemand_Electricity_Flow": {
+        "units": "kilowatt",
+        "tags": [
+          "O2PlantCompressor_Electricity_OutFlow"
+        ],
+        "unary_operations": "noop",
+        "type": "Flow",
+        "contents": "Electricity"
+      }
+    }
+  },
+  "O2PlantToAerator": {
+    "type": "Pipe",
+    "source": "O2Plant",
+    "destination": "AerationBasin",
+    "contents": "Air",
+    "bidirectional": false,
+    "flowrate": {
+      "design": null,
+      "units": "tons/day",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "pressure": {
+      "min": null,
+      "max": null,
+      "design": null,
+      "units": "MPa"
+    },
+    "tags": {
+      "HFI500GP": {
+        "units": "tons/day",
+        "source_unit_id": "total",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "Oxygen"
+      }
+    },
+    "virtual_tags": {
+      "O2Plant_AerationBasin_Air_Flow": {
+        "units": "m**3 / day",
+        "tags": [
+          "HFI500GP"
+        ],
+        "custom_operations": "lambda tag1: tag1 * 1000 * 1000 / 32 / 0.21 * 8.314 * 293 / (0.1 * 1000000)",
+        "type": "Flow",
+        "contents": "Air"
+      }
+    }
+  },
+  "CompressorToO2Plant": {
+    "type": "Wire",
+    "source": "O2PlantCompressor",
+    "destination": "O2Plant",
+    "contents": "Electricity",
+    "bidirectional": false,
+    "tags": {},
+    "virtual_tags": {}
+  },
+  "O2PlantToTank": {
+    "type": "Pipe",
+    "source": "O2Plant",
+    "destination": "O2HoldingTank",
+    "contents": "Air",
+    "bidirectional": false,
+    "flowrate": {
+      "design": null,
+      "units": "tons/day",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "pressure": {
+      "min": null,
+      "max": null,
+      "design": null,
+      "units": "MPa"
+    },
+    "tags": {},
+    "virtual_tags": {}
+  },
+  "TankToAerator": {
+    "type": "Pipe",
+    "source": "O2HoldingTank",
+    "destination": "AerationBasin",
+    "contents": "Air",
+    "bidirectional": false,
+    "flowrate": {
+      "design": null,
+      "units": "tons/day",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "pressure": {
+      "min": null,
+      "max": null,
+      "design": null,
+      "units": "MPa"
+    },
+    "tags": {},
+    "virtual_tags": {}
+  },
+  "EBMUD": {
+    "type": "Facility",
+    "input_contents": [
+      "UntreatedSewage"
+    ],
+    "output_contents": [
+      "TreatedSewage"
+    ],
+    "tags": {},
+    "virtual_tags": {},
+    "nodes": [
+      "PrimaryClarifier",
+      "AerationBasin",
+      "Cogenerator",
+      "VirtualDemand",
+      "LiftPump",
+      "O2PlantCompressor",
+      "O2Plant",
+      "O2HoldingTank"
+    ],
+    "connections": [
+      "LiftPumpToPrimary",
+      "PrimaryToAerator",
+      "CogenToFacility",
+      "O2PlantToAerator",
+      "CompressorToO2Plant",
+      "O2PlantToTank",
+      "TankToAerator",
+      "CompressorToVirtualDemand"
+    ],
+    "flowrate": {
+      "design": null,
+      "units": null,
+      "min_flow": null,
+      "max_flow": null
+    }
+  },
+  "PowerGrid1": {
+    "type": "Network",
+    "input_contents": [
+      "Electricity"
+    ],
+    "output_contents": [
+      "Electricity"
+    ],
+    "tags": {},
+    "virtual_tags": {},
+    "nodes": [],
+    "connections": []
+  },
+  "PowerGrid2": {
+    "type": "Network",
+    "input_contents": [
+      "Electricity"
+    ],
+    "output_contents": [
+      "Electricity"
+    ],
+    "tags": {},
+    "virtual_tags": {},
+    "nodes": [],
+    "connections": []
+  },
+  "PrimaryClarifier": {
+    "type": "Clarification",
+    "input_contents": [
+      "UntreatedSewage"
+    ],
+    "output_contents": [
+      "PrimaryEffluent"
+    ],
+    "tags": {},
+    "virtual_tags": {},
+    "volume": {
+      "value": 792.87,
+      "units": "m ** 3"
+    },
+    "flowrate": {
+      "design": 2,
+      "units": "MGD",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "num_units": 5
+  },
+  "AerationBasin": {
+    "type": "Aeration",
+    "input_contents": [
+      "PrimaryEffluent",
+      "WasteActivatedSludge",
+      "Air"
+    ],
+    "output_contents": [
+      "PrimaryEffluent"
+    ],
+    "tags": {},
+    "virtual_tags": {},
+    "volume": {
+      "value": 2319.72,
+      "units": "m ** 3"
+    },
+    "flowrate": {
+      "design": 1.63,
+      "units": "MGD",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "num_units": 8
+  },
+  "Cogenerator": {
+    "type": "Cogeneration",
+    "input_contents": [
+      "Biogas",
+      "NaturalGas"
+    ],
+    "output_contents": [
+      "Electricity"
+    ],
+    "tags": {
+    },
+    "virtual_tags": {},
+    "generation_capacity": {
+      "min": 0,
+      "max": 1266,
+      "design": 1266,
+      "units": "kilowatt"
+    },
+    "num_units": 2
+  },
+  "VirtualDemand": {
+    "type": "Network",
+    "input_contents": [
+      "Electricity"
+    ],
+    "output_contents": [
+      "Electricity"
+    ],
+    "tags": {},
+    "virtual_tags": {
+      "VirtualDemand_Electricity_InFlow": {
+        "units": "kilowatt",
+        "tags": [
+          "W17NP1151_1F_PLC1_RD",
+          "W17NP1107_1F_PLC1_RD",
+          "NET_GENERATION"
+        ],
+        "custom_operations": "lambda tag1, tag2, tag3: tag1 + tag2 + tag3",
+        "type": "Flow",
+        "contents": "Electricity"
+      },
+      "VirtualDemand_RestOfFacilityPower": {
+        "units": "kilowatt",
+        "tags": [
+          "VirtualDemand_Electricity_InFlow",
+          "NET_GENERATION",
+          "O2PlantCompressor_Electricity_OutFlow"
+        ],
+        "custom_operations": "lambda tag1, tag2, tag3: tag1 - tag2 - tag3",
+        "type": "Power",
+        "contents": "Electricity"
+      }
+    },
+    "nodes": [],
+    "connections": []
+  },
+  "LiftPump": {
+    "type": "Pump",
+    "input_contents": [
+      "UntreatedSewage"
+    ],
+    "output_contents": [
+      "UntreatedSewage"
+    ],
+    "tags": {
+      "AFY600A": {
+        "units": "MGD",
+        "source_unit_id": "total",
+        "dest_unit_id": "total",
+        "totalized": false,
+        "type": "Flow",
+        "contents": "UntreatedSewage"
+      }
+    },
+    "virtual_tags": {},
+    "pump_type": "Constant",
+    "flowrate": {
+      "design": null,
+      "units": "MGD",
+      "min_flow": null,
+      "max_flow": null
+    },
+    "num_units": null
+  },
+  "O2PlantCompressor": {
+    "type": "Pump",
+    "input_contents": [
+      "Electricity"
+    ],
+    "output_contents": [
+      "Electricity"
+    ],
+    "tags": {
+      "O106AKW": {
+        "units": "kilowatt",
+        "source_unit_id": 1,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "OutFlow",
+        "contents": "Electricity"
+      },
+      "O206AKW": {
+        "units": "kilowatt",
+        "source_unit_id": 2,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "OutFlow",
+        "contents": "Electricity"
+      }
+    },
+    "virtual_tags": {
+      "O2PlantCompressor_Electricity_OutFlow": {
+        "units": "kilowatt",
+        "tags": [
+          "O106AKW",
+          "O206AKW"
+        ],
+        "custom_operations": "lambda tag1, tag2: tag1 + tag2",
+        "type": "OutFlow",
+        "contents": "Electricity"
+      }
+    },
+    "compression_capacity": {
+      "min": 0,
+      "max": 1000,
+      "design": 1000,
+      "units": "kilowatt"
+    },
+    "num_units": 2
+  },
+  "O2Plant": {
+    "type": "Reactor",
+    "input_contents": [
+      "Electricity"
+    ],
+    "output_contents": [
+      "Air"
+    ],
+    "tags": {
+      "OFR1201": {
+        "units": "1000 * foot ** 3 / hour",
+        "source_unit_id": 1,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "OutFlow",
+        "contents": "Air"
+      },
+      "OFR1202": {
+        "units": "1000 * foot ** 3 / hour",
+        "source_unit_id": 2,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "OutFlow",
+        "contents": "Air"
+      }
+    },
+    "virtual_tags": {},
+    "production_capacity": {
+      "min": 0,
+      "max": 500,
+      "design": 500,
+      "units": "1000 * foot ** 3 / hour"
+    },
+    "num_units": 2
+  },
+  "O2HoldingTank": {
+    "type": "Tank",
+    "input_contents": [
+      "Air"
+    ],
+    "output_contents": [
+      "Air"
+    ],
+    "tags": {
+      "W44LI616_1": {
+        "units": "inches",
+        "source_unit_id": 1,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "Level",
+        "contents": "Air"
+      },
+      "W44LI626_1": {
+        "units": "inches",
+        "source_unit_id": 2,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "Level",
+        "contents": "Air"
+      },
+      "W44LI616_2": {
+        "units": "inches",
+        "source_unit_id": 3,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "Level",
+        "contents": "Air"
+      },
+      "W44LI626_2": {
+        "units": "inches",
+        "source_unit_id": 4,
+        "dest_unit_id": null,
+        "totalized": false,
+        "type": "Level",
+        "contents": "Air"
+      }
+    },
+    "virtual_tags": {
+      "O2HoldingTank_Total_Level": {
+        "units": "inch",
+        "tags": [
+           "W44LI616_1",
+           "W44LI626_1",
+           "W44LI616_2",
+           "W44LI626_2"
+        ],
+        "operations": "lambda tag1,tag2,tag3,tag4: tag1+tag2+tag3+tag4",
+        "type": "Level",
+        "contents": "Air"
+     }
+    },
+    "storage_capacity": {
+      "value": 1000,
+      "units": "gallons"
+    },
+    "num_units": 4
+  }
+} 

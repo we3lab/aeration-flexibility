@@ -1,0 +1,81 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,52.56,52.56,$/month,
+electric,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,1.86,1.86,$/kW,
+electric,demand,winter,0.0,0.0,1.0,5.0,8.0,20.0,0.0,4.0,5.09,5.09,$/kW,
+electric,demand,summer,0.0,0.0,6.0,9.0,8.0,20.0,0.0,4.0,5.48,5.48,$/kW,
+electric,demand,winter,0.0,0.0,10.0,12.0,8.0,20.0,0.0,4.0,5.09,5.09,$/kW,
+electric,energy,,0.0,0.0,1.0,1.0,0.0,8.0,0.0,4.0,0.02767121882,0.02767121882,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,1.0,1.0,20.0,24.0,0.0,4.0,0.02767121882,0.02767121882,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,1.0,1.0,8.0,20.0,0.0,4.0,0.03017049378,0.03017049378,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,1.0,1.0,0.0,24.0,5.0,6.0,0.02767121882,0.02767121882,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,2.0,2.0,0.0,8.0,0.0,4.0,0.03899305164,0.03899305164,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,2.0,2.0,20.0,24.0,0.0,4.0,0.03899305164,0.03899305164,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,2.0,2.0,8.0,20.0,0.0,4.0,0.04469269344,0.04469269344,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,2.0,2.0,0.0,24.0,5.0,6.0,0.03899305164,0.03899305164,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,3.0,3.0,0.0,8.0,0.0,4.0,0.03187298452,0.03187298452,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,3.0,3.0,20.0,24.0,0.0,4.0,0.03187298452,0.03187298452,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,3.0,3.0,8.0,20.0,0.0,4.0,0.03066592768,0.03066592768,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,3.0,3.0,0.0,24.0,5.0,6.0,0.03187298452,0.03187298452,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,4.0,4.0,0.0,8.0,0.0,4.0,0.03002261833,0.03002261833,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,4.0,4.0,20.0,24.0,0.0,4.0,0.03002261833,0.03002261833,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,4.0,4.0,8.0,20.0,0.0,4.0,0.02952926205,0.02952926205,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,4.0,4.0,0.0,24.0,5.0,6.0,0.03002261833,0.03002261833,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,5.0,5.0,0.0,8.0,0.0,4.0,0.02960447577,0.02960447577,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,5.0,5.0,20.0,24.0,0.0,4.0,0.02960447577,0.02960447577,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,5.0,5.0,8.0,20.0,0.0,4.0,0.03325155188,0.03325155188,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,5.0,5.0,0.0,24.0,5.0,6.0,0.02960447577,0.02960447577,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,6.0,6.0,0.0,8.0,0.0,4.0,0.0314833944,0.0314833944,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,6.0,6.0,20.0,24.0,0.0,4.0,0.0314833944,0.0314833944,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,6.0,6.0,8.0,20.0,0.0,4.0,0.03706530916,0.03706530916,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,6.0,6.0,0.0,24.0,5.0,6.0,0.0314833944,0.0314833944,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,7.0,7.0,0.0,8.0,0.0,4.0,0.03474070867,0.03474070867,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,7.0,7.0,20.0,24.0,0.0,4.0,0.03474070867,0.03474070867,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,7.0,7.0,8.0,20.0,0.0,4.0,0.04189489636,0.04189489636,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,7.0,7.0,0.0,24.0,5.0,6.0,0.03474070867,0.03474070867,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,8.0,8.0,0.0,8.0,0.0,4.0,0.03882722154,0.03882722154,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,8.0,8.0,20.0,24.0,0.0,4.0,0.03882722154,0.03882722154,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,8.0,8.0,8.0,20.0,0.0,4.0,0.04913115831,0.04913115831,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,8.0,8.0,0.0,24.0,5.0,6.0,0.03882722154,0.03882722154,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,9.0,9.0,0.0,8.0,0.0,4.0,0.0417026984,0.0417026984,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,9.0,9.0,20.0,24.0,0.0,4.0,0.0417026984,0.0417026984,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,9.0,9.0,8.0,20.0,0.0,4.0,0.05016407795,0.05016407795,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,9.0,9.0,0.0,24.0,5.0,6.0,0.0417026984,0.0417026984,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,10.0,10.0,0.0,8.0,0.0,4.0,0.05218288189,0.05218288189,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,10.0,10.0,20.0,24.0,0.0,4.0,0.05218288189,0.05218288189,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,10.0,10.0,8.0,20.0,0.0,4.0,0.05645298133,0.05645298133,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,10.0,10.0,0.0,24.0,5.0,6.0,0.05218288189,0.05218288189,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,11.0,11.0,0.0,8.0,0.0,4.0,0.05478994373,0.05478994373,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,11.0,11.0,20.0,24.0,0.0,4.0,0.05478994373,0.05478994373,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,11.0,11.0,8.0,20.0,0.0,4.0,0.05702492586,0.05702492586,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,11.0,11.0,0.0,24.0,5.0,6.0,0.05478994373,0.05478994373,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,12.0,12.0,0.0,8.0,0.0,4.0,0.03706198624,0.03706198624,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,12.0,12.0,20.0,24.0,0.0,4.0,0.03706198624,0.03706198624,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,12.0,12.0,8.0,20.0,0.0,4.0,0.04226297984,0.04226297984,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+electric,energy,,0.0,0.0,12.0,12.0,0.0,24.0,5.0,6.0,0.03706198624,0.03706198624,$/kWh,Monthly average of LMP plus base charge of $0.009275 / kWh
+gas,customer,,,,,,,,,,17.75,17.75,$/month,
+gas,demand,winter-peak,0.0,0.0,1.0,4.0,0.0,24.0,0.0,6.0,97.5168,34.43778958074359,$/therm/hr or $/m3/hr,
+gas,demand,winter-peak,0.0,0.0,11.0,12.0,0.0,24.0,0.0,6.0,97.5168,34.43778958074359,$/therm/hr or $/m3/hr,
+gas,energy,,0.0,0.0,1.0,1.0,0.0,24.0,0.0,6.0,0.516427,0.1823747739857611,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,1.0,1.0,0.0,24.0,0.0,6.0,0.51578,0.18214628771612612,$/therm or $/m3,
+gas,energy,,0.0,0.0,2.0,2.0,0.0,24.0,0.0,6.0,0.5453250000000001,0.1925800231664595,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,2.0,2.0,0.0,24.0,0.0,6.0,0.544678,0.1923515368968245,$/therm or $/m3,
+gas,energy,,0.0,0.0,3.0,3.0,0.0,24.0,0.0,6.0,0.552917,0.19526111707537575,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,3.0,3.0,0.0,24.0,0.0,6.0,0.5522699999999999,0.19503263080574074,$/therm or $/m3,
+gas,energy,,0.0,0.0,4.0,4.0,0.0,24.0,0.0,6.0,0.52357,0.18489730478020114,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,4.0,4.0,0.0,24.0,0.0,6.0,0.522923,0.18466881851056619,$/therm or $/m3,
+gas,energy,,0.0,0.0,5.0,5.0,0.0,24.0,0.0,6.0,0.558162,0.19711337439258675,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,5.0,5.0,0.0,24.0,0.0,6.0,0.557515,0.19688488812295174,$/therm or $/m3,
+gas,energy,,0.0,0.0,6.0,6.0,0.0,24.0,0.0,6.0,0.564156,0.1992301389987569,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,6.0,6.0,0.0,24.0,0.0,6.0,0.5635089999999999,0.1990016527291219,$/therm or $/m3,
+gas,energy,,0.0,0.0,7.0,7.0,0.0,24.0,0.0,6.0,0.623747,0.2202745366708103,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,7.0,7.0,0.0,24.0,0.0,6.0,0.6231,0.22004605040117528,$/therm or $/m3,
+gas,energy,,0.0,0.0,8.0,8.0,0.0,24.0,0.0,6.0,0.670319,0.23672131031755,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,8.0,8.0,0.0,24.0,0.0,6.0,0.6696719999999999,0.236492824047915,$/therm or $/m3,
+gas,energy,,0.0,0.0,9.0,9.0,0.0,24.0,0.0,6.0,0.702584,0.24811560628319584,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,9.0,9.0,0.0,24.0,0.0,6.0,0.7019369999999999,0.24788712001356084,$/therm or $/m3,
+gas,energy,,0.0,0.0,10.0,10.0,0.0,24.0,0.0,6.0,0.848186,0.29953455192677136,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,10.0,10.0,0.0,24.0,0.0,6.0,0.8475389999999999,0.29930606565713636,$/therm or $/m3,
+gas,energy,,0.0,0.0,11.0,11.0,0.0,24.0,0.0,6.0,0.897523,0.31695777771499606,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,11.0,11.0,0.0,24.0,0.0,6.0,0.8968759999999999,0.31672929144536105,$/therm or $/m3,
+gas,energy,,0.0,0.0,12.0,12.0,0.0,24.0,0.0,6.0,0.819414,0.28937379929935586,$/therm or $/m3,
+gas,energy,,1000.0,2831.68,12.0,12.0,0.0,24.0,0.0,6.0,0.8187669999999999,0.28914531302972085,$/therm or $/m3,

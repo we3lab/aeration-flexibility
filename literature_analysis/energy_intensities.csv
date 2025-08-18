@@ -1,0 +1,17 @@
+﻿Technology,Contaminant,Uses aeration?,Contaminant concentration (mg/L),Lower limit OTE,Upper limit OTE,Average OTE,Lower limit energy intensity (kwh/m3),Upper limit energy intensity (kwh/m3),Average energy intensity (kwh/m3),Lower limit energy intensity (kwh/kg),Upper limit energy intensity (kwh/kg),Average energy intensity (kwh/kg),Oxygen demand low (kg O2 / m3),Oxygen demand high (kg O2 / m3),TRL,Oxygen Usage Timing,Source
+CAS,COD,y,400,0.7,0.8,0.7,0.3,0.6,0.45,0.12,0.24,0.18,0.55,0.628571429,9,0.95,https://www.sciencedirect.com/science/article/pii/S1876610217309530
+Trickling filter,COD,y,400,0,0,0,0.2,0.5,0.35,0.08,0.2,0.14,0.03,0.06,9,0.7,https://www.sciencedirect.com/science/article/pii/S1876610217309530
+CAS,COD,y,400,0.7,0.8,0.7,0.33,0.6,0.465,0.132,0.24,0.186,0.55,0.628571429,9,0.95,https://www.researchgate.net/profile/Meng-Zhang-94/publication/337340063_Energy_use_and_challenges_in_current_wastewater_treatment_plants/links/5e3c1ff8299bf1cdb911d662/Energy-use-and-challenges-in-current-wastewater-treatment-plants.pdf
+SBR,COD,y,400,0.7,0.8,0.7,0.27,0.55,0.41,0.108,0.22,0.164,0.55,0.628571429,9,0.6,
+Electrochemical,COD,n,35000,0,0,0,4,10,210,2975,11725,7350,0,0,3,,https://www.nature.com/articles/s41598-024-52201-5
+MBR,COD,y,400,0.5,0.6,0.5,0.8,1.6,1.2,0.32,0.64,0.48,0.733333333,0.88,8,0.8,"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9699148/#:~:text=It%20has%20been%20found%20that,total%20energy%20consumption%20%5B6%5D."
+CAS + BNR,COD,y,400,0.7,0.8,0.7,0.4,0.8,0.6,0.16,0.32,0.24,0.6,1.05,8,0.95,https://www.sciencedirect.com/science/article/pii/S1876610217309530
+Partial Nitritation / Annamox,COD,y,400,0.9,1,1,,,,0,0,0,0.44,0.55,7,0.8,
+UASB,COD,n,400,0,0,0,0.1,0.3,,0,0,0,0,0,3,,
+AnMBR,COD,n,400,0,0,0,0.15,0.4,,0,0,0,0,0,2,,
+Electrochemical,N,n,120,0,0,0,,,,,,,0,0,2,,https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8776051/
+CAS + BNR,COD,y,400,0.7,0.8,0.7,0.43,0.7,0.565,0.172,0.28,0.226,0.55,0.628571429,7,0.9,https://www.researchgate.net/profile/Meng-Zhang-94/publication/337340063_Energy_use_and_challenges_in_current_wastewater_treatment_plants/links/5e3c1ff8299bf1cdb911d662/Energy-use-and-challenges-in-current-wastewater-treatment-plants.pdf
+Non-aerated MBR,COD,y,400,0.7,0.8,0.7,0.48,0.78,0.63,0.192,0.312,0.252,0.55,0.628571429,5,0.95,"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9699148/#:~:text=It%20has%20been%20found%20that,total%20energy%20consumption%20%5B6%5D."
+MBR + BNR,COD,y,400,0.5,0.6,0.5,0.9,1.7,1.3,0.36,0.68,0.52,0.733333333,1.2,8,0.8,"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9699148/#:~:text=It%20has%20been%20found%20that,total%20energy%20consumption%20%5B6%5D."
+MBR + Microbial Fuel Cell,COD,y,400,,,,0.02,0.03,,,,0.5,0.7,1,3,0.85,https://www.frontiersin.org/articles/10.3389/fenrg.2022.843768/full
+High-purity oxygen AS,COD,y,400,,,,0.7,1,,,,,0.7,0.9,8,0.95,

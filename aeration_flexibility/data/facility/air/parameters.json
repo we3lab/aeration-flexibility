@@ -1,0 +1,1684 @@
+{
+   "SVCW": {
+      "GENERAL_INFO": {
+         "facility_id": "SVCW",
+         "datetime_varname": "DateTime",
+         "available_date_range": [
+            "2022-07-01",
+            "2024-03-18"
+         ],
+         "clean_date_range": [
+            "2022-07-01",
+            "2024-03-18"
+         ],
+         "exclude_dts": [],
+         "source_path": [
+            "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+            "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+         ],
+         "cogen_efficiency_range": [],
+         "consec_nan_limit": 0
+      },
+      "BILLING": {
+         "rate structure path": "",
+         "country": "US",
+         "holiday names": []
+      },
+      "SCADA_VARIABLES": {
+         "AerationBasin_Blower_Power": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AerationBasin_Blower_Power",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  1000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "AerationBasin_Mixers_Power": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AerationBasin_Mixers_Power",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  2000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "AerationBasin_TotalAerationPower": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AerationBasin_TotalAerationPower",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Battery_Electricity_NetFlow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "Battery(KW)",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  -2000,
+                  2000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_1_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16101.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_2_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16102.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_3_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16201.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_4_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16202.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_5_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16301.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_6_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16302.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_7_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16401.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_8_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "AB_MON_FIT_16402.ScldAnlgS",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Blower_AerationBasin_Air_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "Blower_AerationBasin_Air_Flow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "Cogenerator_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "CGN_ENG_DAILY_DATA.CGN_NET_ELECTRICITY_KWH",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": true
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  2607.96
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "LiftPump_PrimaryClarifier_UntreatedSewage_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "FEP_INFLUENT_FLOW.PV",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "PowerGrid_SVCW_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "CGN_ENG_DAILY_DATA.PLANT_PURCHASED_KWH",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": true
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [
+                  -20,
+                  1000
+               ],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "VirtualDemand_Electricity_InFlow": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "VirtualDemand_Electricity_InFlow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "VirtualDemand_RestOfFacilityPower": {
+            "preprocessing": {
+               "source_path": [
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+               ],
+               "SCADA_tag": "VirtualDemand_RestOfFacilityPower",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         }
+      },
+      "OTHER_DATA": {
+         "source_path": [],
+         "custom_clean_function": [],
+         "merge_type": []
+      },
+      "MASS_BALANCES": {
+         "AerationBasin_Mixers_Power": {
+            "children": [
+               "Blower_1_AerationBasin_Air_Flow",
+               "Blower_2_AerationBasin_Air_Flow",
+               "Blower_3_AerationBasin_Air_Flow",
+               "Blower_4_AerationBasin_Air_Flow",
+               "Blower_5_AerationBasin_Air_Flow",
+               "Blower_6_AerationBasin_Air_Flow",
+               "Blower_7_AerationBasin_Air_Flow",
+               "Blower_8_AerationBasin_Air_Flow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "AerationBasin_TotalAerationPower": {
+            "children": [
+               "AerationBasin_Blower_Power",
+               "AerationBasin_Mixers_Power"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "Blower_AerationBasin_Air_Flow": {
+            "children": [
+               "Blower_1_AerationBasin_Air_Flow",
+               "Blower_2_AerationBasin_Air_Flow",
+               "Blower_3_AerationBasin_Air_Flow",
+               "Blower_4_AerationBasin_Air_Flow",
+               "Blower_5_AerationBasin_Air_Flow",
+               "Blower_6_AerationBasin_Air_Flow",
+               "Blower_7_AerationBasin_Air_Flow",
+               "Blower_8_AerationBasin_Air_Flow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "children": [
+               "PowerGrid_SVCW_Electricity_Flow",
+               "Battery_Electricity_NetFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "VirtualDemand_Electricity_InFlow": {
+            "children": [
+               "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "Cogenerator_VirtualDemand_Electricity_Flow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "VirtualDemand_RestOfFacilityPower": {
+            "children": [
+               "VirtualDemand_Electricity_InFlow",
+               "AerationBasin_TotalAerationPower"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         }
+      },
+      "CLEANING_MODELS": []
+   },
+   "PowerGrid": {
+      "GENERAL_INFO": {
+         "facility_id": "PowerGrid",
+         "datetime_varname": "DateTime",
+         "available_date_range": [],
+         "clean_date_range": [],
+         "exclude_dts": [],
+         "source_path": [],
+         "cogen_efficiency_range": [],
+         "consec_nan_limit": 96
+      },
+      "BILLING": {
+         "rate structure path": "",
+         "country": "US",
+         "holiday names": []
+      },
+      "SCADA_VARIABLES": {
+         "PowerGrid_SVCW_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "CGN_ENG_DAILY_DATA.PLANT_PURCHASED_KWH",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": true
+            },
+            "cleaning": {
+               "clean_tukey": true,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [
+                  -20,
+                  500
+               ],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  3000
+               ],
+               "outlier_chg_cutoff": [
+                  -20,
+                  500
+               ],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         }
+      },
+      "OTHER_DATA": {
+         "source_path": [],
+         "custom_clean_function": [],
+         "merge_type": []
+      },
+      "MASS_BALANCES": {
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "children": [
+               "PowerGrid_SVCW_Electricity_Flow",
+               "Battery_Electricity_NetFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         }
+      },
+      "CLEANING_MODELS": []
+   },
+   "ParentNetwork": {
+      "GENERAL_INFO": {
+         "facility_id": "ParentNetwork",
+         "datetime_varname": "DateTime",
+         "available_date_range": [],
+         "clean_date_range": [],
+         "exclude_dts": [],
+         "source_path": [],
+         "cogen_efficiency_range": [],
+         "consec_nan_limit": 96
+      },
+      "BILLING": {
+         "rate structure path": "",
+         "country": "US",
+         "holiday names": []
+      },
+      "SCADA_VARIABLES": {
+         "PowerGrid_SVCW_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "CGN_ENG_DAILY_DATA.PLANT_PURCHASED_KWH",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": true
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  4000
+               ],
+               "outlier_chg_cutoff": [
+                  -20,
+                  500
+               ],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         }
+      },
+      "OTHER_DATA": {
+         "source_path": [],
+         "custom_clean_function": [],
+         "merge_type": []
+      },
+      "MASS_BALANCES": {
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "children": [
+               "PowerGrid_SVCW_Electricity_Flow",
+               "Battery_Electricity_NetFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         }
+      },
+      "CLEANING_MODELS": []
+   },
+   "VirtualDemand": {
+      "GENERAL_INFO": {
+         "facility_id": "VirtualDemand",
+         "datetime_varname": "DateTime",
+         "available_date_range": [],
+         "clean_date_range": [],
+         "exclude_dts": [],
+         "source_path": [],
+         "cogen_efficiency_range": [],
+         "consec_nan_limit": 96
+      },
+      "BILLING": {
+         "rate structure path": "",
+         "country": "US",
+         "holiday names": []
+      },
+      "SCADA_VARIABLES": {
+         "Cogenerator_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "CGN_ENG_DAILY_DATA.CGN_NET_ELECTRICITY_KWH",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": true
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [
+                  0,
+                  2607.96
+               ],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "VirtualDemand_Electricity_InFlow": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "VirtualDemand_Electricity_InFlow",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         },
+         "VirtualDemand_RestOfFacilityPower": {
+            "preprocessing": {
+               "source_path": [],
+               "SCADA_tag": "VirtualDemand_RestOfFacilityPower",
+               "to_numeric": true,
+               "detotalize_validation": {
+                  "impute": false,
+                  "use_zeros": false,
+                  "zero_tol": 1e-09,
+                  "use_negatives": false,
+                  "neg_tol": 1e-09,
+                  "use_nans": false
+               },
+               "remove_neg_values": false,
+               "neg_tol": 1e-09,
+               "remove_id_adj_values": false,
+               "id_adj_values_tol": 1e-09,
+               "remove_0_values": false,
+               "zero_tol": 1e-09,
+               "custom_preprocess_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               },
+               "detotalize": false
+            },
+            "cleaning": {
+               "clean_tukey": false,
+               "outlier_cutoff": [],
+               "outlier_chg_cutoff": [],
+               "custom_clean_bool": [],
+               "custom_clean_function": {
+                  "method": "",
+                  "args": [],
+                  "kwargs": {}
+               }
+            },
+            "imputation": {
+               "method": "interpolate",
+               "method_args": [],
+               "method_kwargs": {
+                  "method": "linear"
+               },
+               "model_trainer_args": [],
+               "model_trainer_kwargs": {}
+            }
+         }
+      },
+      "OTHER_DATA": {
+         "source_path": [],
+         "custom_clean_function": [],
+         "merge_type": []
+      },
+      "MASS_BALANCES": {
+         "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
+            "children": [
+               "PowerGrid_SVCW_Electricity_Flow",
+               "Battery_Electricity_NetFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "VirtualDemand_Electricity_InFlow": {
+            "children": [
+               "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
+               "Cogenerator_VirtualDemand_Electricity_Flow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "VirtualDemand_RestOfFacilityPower": {
+            "children": [
+               "VirtualDemand_Electricity_InFlow",
+               "AerationBasin_TotalAerationPower"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         }
+      },
+      "CLEANING_MODELS": []
+   }
+}

@@ -1,0 +1,14 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,325.2,325.2,$/month,Estimated from multiplying cost of 1 meter for 1 day by 30 days
+electric,energy,,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,0.02662,0.02662,$/kWh,
+electric,demand,winter-peak1,0.0,0.0,1.0,4.0,6.0,22.0,0.0,4.0,7.49,7.49,$/kW,
+electric,demand,winter-super-peak1,0.0,0.0,1.0,4.0,6.0,12.0,0.0,4.0,9.78,9.78,$/kW,
+electric,demand,winter-all-hours1,0.0,0.0,1.0,5.0,0.0,24.0,0.0,6.0,2.45,2.45,$/kW,
+electric,demand,summer-peak,0.0,0.0,6.0,9.0,10.0,22.0,0.0,4.0,7.49,7.49,$/kW,
+electric,demand,summer-super-peak,0.0,0.0,6.0,9.0,13.0,19.0,0.0,4.0,9.78,9.78,$/kW,
+electric,demand,summer-all-hours,0.0,0.0,6.0,9.0,0.0,24.0,0.0,6.0,2.45,2.45,$/kW,
+electric,demand,winter-peak2,0.0,0.0,10.0,12.0,6.0,22.0,0.0,4.0,7.49,7.49,$/kW,
+electric,demand,winter-super-peak2,0.0,0.0,10.0,12.0,6.0,12.0,0.0,4.0,9.78,9.78,$/kW,
+electric,demand,winter-all-hours2,0.0,0.0,10.0,12.0,0.0,24.0,0.0,6.0,2.45,2.45,$/kW,
+gas,customer,,,,,,,,,,24.64,24.64,$/month,
+gas,energy,,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,0.73056,0.25799525370098314,$/therm or $/m3,

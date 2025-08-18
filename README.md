@@ -1,13 +1,138 @@
-# WE3Lab Cookie Cutter
-
-[![Example Repo Status](https://github.com/we3lab/cookie-cutter/workflows/Build%20Example%20Repo/badge.svg)](https://github.com/we3lab/tree/example-build)
+# Aeration Flexibility
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-WE3Lab Cookiecutter template for a Python package. 
-Based on AICS [cookiecutter-pypackage](https://github.com/AllenCellModeling/cookiecutter-pypackage), which itself was based on https://github.com/audreyr/cookiecutter-pypackage/.
+WE3Lab documentation for "Reducing the cost of wastewater aeration through optimally designed air and high-purity oxygen storage".
 
 ## About
+
+
+### 1. Run with default configuration (standard analysis):
+```bash
+python run_all.py
+```
+This uses `configs/run_20250629.json` by default.
+
+### 2. Run with a specific configuration:
+```bash
+python run_all.py configs/run_20250629.json
+```
+
+### 3. Run tornado analysis:
+```bash
+python run_all.py configs/run_test_nr_tornado.json
+```
+
+## File Structure
+
+```
+oxygen_storage/
+├── run_all.py                    # Main entry point for both analysis types
+├── helpers/
+│   ├── plotting.py              # Standard plotting functions (with tornado detection)
+│   └── ...
+├── configs/
+│   ├── run_20250629.json        # Standard analysis configuration
+│   └── run_test_nr_tornado.json # Tornado analysis configuration
+└── output_data/                 # All output files
+```
+
+
+## Configuration File Structure
+
+### Common Fields
+- `run_name`: The name of the run
+- `data_ingestion`: Data processing settings
+- `script_settings`: Which parts of the pipeline to run
+
+### WWTP Comparison Analysis Fields
+- `summer_config_template`: Array of configurations with multiplier, smoothing, suffix
+- `upgrade_keys`: Upgrade configurations for different WWTP types
+- `design_space`: Ranges and parameters for multiple design points
+
+### Tornado Analysis Fields
+- `design_point`: Single design point [hours, compression_ratio]
+- `base_wwtp_key`: WWTP type (e.g., "o2__psa")
+- `upgrade_key`: Upgrade type (e.g., "none__gas_tank__0")
+- `parametrized_variations`: Dictionary mapping variation names to tariff keys
+
+## Example Configurations
+
+### Standard Analysis (`configs/run_20250629.json`)
+```json
+{
+  "run_name": "run_20250629",
+  "summer_config_template": [
+    {
+      "multiplier": 1.2,
+      "smoothing": 2,
+      "suffix": "nr_smooth"
+    },
+    {
+      "multiplier": 1.0,
+      "smoothing": 0
+    }
+  ],
+  "upgrade_keys": {
+    "air__compressor": [],
+    "o2__psa": ["elec__gas_tank__0", "none__gas_tank__0"],
+    "o2__cryo": ["elec__gas_tank__0", "none__liquid_tank__0"]
+  },
+  "data_ingestion": {
+    "shorten_months_run": 1,
+    "scale_factor": 2.963
+  },
+  "design_space": {
+    "o2_range": [0.25, 3.0],
+    "comp_ratio_range": [10.0, 700.0],
+    "designs_per_run": 5,
+    "max_iterations": 5,
+    "n_jobs": 20
+  },
+  "script_settings": {
+    "run_ingest_data": true,
+    "run_solve_optimization": true,
+    "skip_already_run": true,
+    "run_plotting": true
+  }
+}
+```
+
+### Tornado Analysis (`configs/run_test_nr_tornado.json`)
+```json
+{
+  "run_name": "run_test_nr_tornado",
+  "design_point": [1.0, 100.0],
+  "base_wwtp_key": "o2__psa",
+  "upgrade_key": "none__gas_tank__0",
+  "parametrized_variations": {
+    "baseline": "0.0__billing",
+    "decrease_peak": "0.0__decreased_demand",
+    "increase_peak": "0.0__increased_demand",
+    "decrease_energy": "0.0__decreased_energy",
+    "increase_energy": "0.0__increased_energy",
+    "decrease_window": "0.0__decreased_peak_window",
+    "increase_window": "0.0__increased_peak_window"
+  },
+  "data_ingestion": {
+    "shorten_months_run": 1,
+    "scale_factor": 2.963
+  },
+  "design_space": {
+    "o2_range": [0.25, 3.0],
+    "comp_ratio_range": [10.0, 700.0],
+    "designs_per_run": 1,
+    "max_iterations": 1,
+    "n_jobs": 7
+  },
+  "script_settings": {
+    "run_ingest_data": false,
+    "run_solve_optimization": true,
+    "skip_already_run": true,
+    "run_plotting": true
+  }
+}
+```
 
 `Cookiecutter` is a Python package to generate templated projects.
 This repository is a template for `cookiecutter` to generate a Python project which contains following:
@@ -34,81 +159,15 @@ We think that this template provides a good starting point for any Python projec
     to GitHub Pages
 -   Includes example code samples for objects, tests, and bin scripts
 
-## Example
+## Data Ingestion
 
--   For an example of the base project that is built from this template, go to the
-    [example-build branch](https://github.com/we3lab/cookie-cutter/tree/example-build).
+The package utilized functions from the WE3 Lab's proprietary flows-prep package for processing:
+- prep_raw_data() → Detotalizes raw SCADA data and calculates virtual tags
+- prep_clean_data() → Cleans the data
+- prep_imputed_data() → Imputes missing values
 
-## Quickstart
+Virtual tags are calculated during this stage
+(e.g., VirtualDemand_Electricity_InFlow, VirtualDemand_RestOfFacilityPower)
 
-To use this template use the following commands and then follow the prompts from the
-terminal.
-
-1. `pip install cookiecutter`
-2. `cookiecutter gh:we3lab/cookie-cutter`
-
-## The Four Commands You Need To Know
-
-1. `pip install -e .[dev]`
-
-    This will install your package in editable mode with all the required development
-    dependencies (i.e. `tox`).
-
-2. `make build`
-
-    This will run `tox` which will run all your tests in both Python 3.7
-    and Python 3.8 as well as linting your code.
-
-3. `make clean`
-
-    This will clean up various Python and build generated files so that you can ensure
-    that you are working in a clean environment.
-
-4. `make docs`
-
-    This will generate and launch a web browser to view the most up-to-date
-    documentation for your Python package.
-
-#### Optional Steps:
-
--   Turn your project into a GitHub repository:
-    -   Make an account on [github.com](https://github.com)
-    -   Go to [make a new repository](https://github.com/new)
-    -   _Recommendations:_
-        -   _It is strongly recommended to make the repository name the same as the Python
-            package name_
-        -   _A lot of the following optional steps are *free* if the repository is Public,
-            plus open source is cool_
-    -   After a GitHub repo has been created, run the commands listed under:
-        "...or push an existing repository from the command line"
--   Register your project with Codecov:
-    -   Make an account on [codecov.io](https://codecov.io)(Recommended to sign in with GitHub)
-        everything else will be handled for you.
--   Ensure that you have set GitHub pages to build the `gh-pages` branch by selecting the
-    `gh-pages` branch in the dropdown in the "GitHub Pages" section of the repository settings.
--   Register your project with PyPI:
-    -   Make an account on [pypi.org](https://pypi.org)
-    -   Go to your GitHub repository's settings and under the `Secrets` tab, add a secret
-        called `PYPI_TOKEN` with your password for your PyPI account. Don't worry, no one
-        will see this password because it will be encrypted.
-    -   Next time you push to the branch: `main` after using `bump2version`, GitHub
-        actions will build and deploy your Python package to PyPI.
-
-#### Suggested Git Branch Strategy
-
-1. `main` is for the most up-to-date development, very rarely should you directly
-   commit to this branch. GitHub Actions will run on every push and on a CRON to this
-   branch but still recommended to commit to your development branches and make pull
-   requests to main. If you push a tagged commit with bumpversion, this will also release to PyPI.
-2. Your day-to-day work should exist on branches separate from `main`. Even if it is
-   just yourself working on the repository, make a PR from your working branch to `main`
-   so that you can ensure your commits don't break the development head. GitHub Actions
-   will run on every push to any branch or any pull request from any branch to any other
-   branch.
-3. It is recommended to use "Squash and Merge" commits when committing PR's. It makes
-   each set of changes to `main` atomic and as a side effect naturally encourages small
-   well defined PR's.
-
-**Original repos:** 
-- https://github.com/AllenCellModeling/cookiecutter-pypackage
-- https://github.com/audreyr/cookiecutter-pypackage/
+Scaling happens after virtual tags are calculated
+The scaling is applied to the final cleaned data that already contains the virtual tags

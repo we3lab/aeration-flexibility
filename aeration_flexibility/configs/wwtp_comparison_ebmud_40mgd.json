@@ -1,0 +1,38 @@
+{
+  "summer_config_template": [
+    {
+      "multiplier": 1.0,
+      "smoothing": 0,
+      "suffix": "base"
+    }
+  ],
+  "upgrade_keys": {
+    "air__compressor": ["compressor__gas_tank__0", "none__battery__0"],
+    "o2__psa": ["elec__gas_tank__0", "none__gas_tank__0", "none__battery__0"],
+    "o2__cryo": ["elec__gas_tank__0", "none__liquid_tank__0", "none__battery__0"]
+  },
+  "tariff_keys_to_run": ["0.0__ebmud"],
+  "data_ingestion": {
+    "shorten_months_run": 2,
+    "scale_factor": 0.5,
+    "ingest_gas": "o2"
+  },
+  "design_space": {
+    "o2_range": [0.05, 3.0],
+    "comp_ratio_range": [10.0, 700.0],
+    "designs_per_run": 5,
+    "max_iterations": 5,
+    "n_jobs": 30
+  },
+  "script_settings": {
+    "run_ingest_data": false,
+    "run_solve_optimization": false,
+    "skip_already_run": true,
+    "run_plotting": true,
+    "plot_profiles": false,
+    "plot_psa_detail": true,
+    "plot_summer_mult": false,
+    "plot_capex_vs_lifetime": false,
+    "plot_tornado": false
+  }
+} 

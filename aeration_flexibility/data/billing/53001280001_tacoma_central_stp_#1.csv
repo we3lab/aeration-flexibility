@@ -1,0 +1,6 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,1715.0,1715.0,$/month,Power Service Agreement required for this rate schedule
+electric,energy,,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,0.04483,0.04483,$/kWh,
+electric,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,5.11,5.11,$/kW,
+gas,customer,,,,,,,,,,33.84,33.84,$/month,
+gas,energy,,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,0.91728,0.32393490789919765,$/therm or $/m3,

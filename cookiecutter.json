@@ -1,10 +1,10 @@
 {
-    "full_name": "Fletcher Chapin",
-    "email": "fchapin@stanford.edu",
+    "full_name": "Daly Wettermark",
+    "email": "dalyw@stanford.edu",
     "github_username": "we3lab",
-    "project_name": "Python Boilerplate",
+    "project_name": "Aeration Flexibility",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
-    "project_short_description": "Python Boilerplate contains all the boilerplate you need to create a Python package.",
+    "project_short_description": "Aeration Flexibility contains capabilities to optmize energy-flexible design and operation of energy for aeration processes.",
     "pypi_username": "{{ cookiecutter.github_username }}",
     "version": "0.0.0",
     "open_source_license": [

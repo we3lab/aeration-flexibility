@@ -1,0 +1,22 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,120.0,120.0,$/month,
+electric,energy,,0.0,0.0,1.0,2.0,0.0,24.0,0.0,6.0,0.027628,0.027628,$/kWh,Includes Fuel Adjsutment Charge
+electric,energy,,0.0,0.0,3.0,5.0,0.0,24.0,0.0,6.0,0.032479,0.032479,$/kWh,Includes Fuel Adjsutment Charge
+electric,energy,,0.0,0.0,6.0,8.0,0.0,24.0,0.0,6.0,0.030026,0.030026,$/kWh,Includes Fuel Adjsutment Charge
+electric,energy,,0.0,0.0,9.0,11.0,0.0,24.0,0.0,6.0,0.036168,0.036168,$/kWh,Includes Fuel Adjsutment Charge
+electric,energy,,0.0,0.0,12.0,12.0,0.0,24.0,0.0,6.0,0.041554,0.041554,$/kWh,Includes Fuel Adjsutment Charge
+electric,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,23.23,23.23,$/kW,
+gas,customer,,,,,,,,,,300.0,300.0,$/month,
+gas,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,15.600000000000001,5.509097073115607,$/therm/hr or $/m3/hr,
+gas,energy,,0.0,0.0,1.0,1.0,0.0,24.0,0.0,6.0,0.35400000000000004,0.12501412588993108,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,2.0,2.0,0.0,24.0,0.0,6.0,0.40490000000000004,0.14298932082721214,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,3.0,3.0,0.0,24.0,0.0,6.0,0.3215,0.11353684032094022,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,4.0,4.0,0.0,24.0,0.0,6.0,0.31470000000000004,0.11113543903265907,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,5.0,5.0,0.0,24.0,0.0,6.0,0.3123,0.11028788563679513,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,6.0,6.0,0.0,24.0,0.0,6.0,0.4168,0.14719177308170414,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,7.0,7.0,0.0,24.0,0.0,6.0,0.3215,0.11353684032094022,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,8.0,8.0,0.0,24.0,0.0,6.0,0.324,0.11441970844163182,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,9.0,9.0,0.0,24.0,0.0,6.0,0.3453,0.12194174482992429,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,10.0,10.0,0.0,24.0,0.0,6.0,0.3632,0.12826308057407618,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,11.0,11.0,0.0,24.0,0.0,6.0,0.3643,0.12865154254718048,$/therm or $/m3,Includes monthly gas supply charge
+gas,energy,,0.0,0.0,12.0,12.0,0.0,24.0,0.0,6.0,0.4168,0.14719177308170414,$/therm or $/m3,Includes monthly gas supply charge

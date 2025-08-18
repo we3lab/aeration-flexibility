@@ -1,0 +1,58 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,1910.0,1910.0,$/month,
+electric,energy,,0.0,0.0,1.0,1.0,0.0,5.0,0.0,4.0,0.05963,0.05963,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,1.0,1.0,5.0,11.0,0.0,4.0,0.06731999999999999,0.06731999999999999,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,1.0,1.0,11.0,24.0,0.0,4.0,0.05963,0.05963,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,1.0,1.0,0.0,24.0,5.0,6.0,0.05963,0.05963,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,2.0,2.0,0.0,5.0,0.0,4.0,0.05879,0.05879,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,2.0,2.0,5.0,11.0,0.0,4.0,0.06648,0.06648,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,2.0,2.0,11.0,24.0,0.0,4.0,0.05879,0.05879,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,2.0,2.0,0.0,24.0,5.0,6.0,0.05879,0.05879,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,3.0,3.0,0.0,5.0,0.0,4.0,0.05932,0.05932,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,3.0,3.0,5.0,11.0,0.0,4.0,0.06701,0.06701,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,3.0,3.0,11.0,24.0,0.0,4.0,0.05932,0.05932,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,3.0,3.0,0.0,24.0,5.0,6.0,0.05932,0.05932,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,4.0,4.0,0.0,24.0,0.0,4.0,0.05975,0.05975,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,5.0,5.0,0.0,24.0,0.0,4.0,0.05789,0.05789,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,6.0,6.0,0.0,14.0,0.0,4.0,0.05811,0.05811,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,6.0,6.0,14.0,20.0,0.0,4.0,0.08302000000000001,0.08302000000000001,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,6.0,6.0,20.0,24.0,0.0,4.0,0.05811,0.05811,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,6.0,6.0,0.0,24.0,5.0,6.0,0.05811,0.05811,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,7.0,7.0,0.0,14.0,0.0,4.0,0.060020000000000004,0.060020000000000004,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,7.0,7.0,14.0,20.0,0.0,4.0,0.08493,0.08493,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,7.0,7.0,20.0,24.0,0.0,4.0,0.060020000000000004,0.060020000000000004,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,7.0,7.0,0.0,24.0,5.0,6.0,0.060020000000000004,0.060020000000000004,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,8.0,8.0,0.0,14.0,0.0,4.0,0.05981,0.05981,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,8.0,8.0,14.0,20.0,0.0,4.0,0.08472,0.08472,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,8.0,8.0,20.0,24.0,0.0,4.0,0.05981,0.05981,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,8.0,8.0,0.0,24.0,5.0,6.0,0.05981,0.05981,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,9.0,9.0,0.0,14.0,0.0,4.0,0.05885,0.05885,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,9.0,9.0,14.0,20.0,0.0,4.0,0.08376,0.08376,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,9.0,9.0,20.0,24.0,0.0,4.0,0.05885,0.05885,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,9.0,9.0,0.0,24.0,5.0,6.0,0.05885,0.05885,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,10.0,10.0,0.0,24.0,0.0,4.0,0.06106,0.06106,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,11.0,11.0,0.0,24.0,0.0,4.0,0.06397,0.06397,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,12.0,12.0,0.0,5.0,0.0,4.0,0.06795000000000001,0.06795000000000001,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,12.0,12.0,5.0,11.0,0.0,4.0,0.07564,0.07564,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,12.0,12.0,11.0,24.0,0.0,4.0,0.06795000000000001,0.06795000000000001,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,energy,,0.0,0.0,12.0,12.0,0.0,24.0,5.0,6.0,0.06795000000000001,0.06795000000000001,$/kWh,Includes total monthly fuel cost adjusment (TMFCA)
+electric,demand,winter-peak1,0.0,0.0,1.0,3.0,5.0,11.0,0.0,4.0,9.9,9.9,$/kW,
+electric,demand,transition-peak1,0.0,0.0,4.0,5.0,14.0,20.0,0.0,4.0,9.9,9.9,$/kW,
+electric,demand,summer-peak,0.0,0.0,6.0,9.0,14.0,20.0,0.0,4.0,10.87,10.87,$/kW,
+electric,demand,transition-peak2,0.0,0.0,10.0,10.0,14.0,20.0,0.0,4.0,9.9,9.9,$/kW,
+electric,demand,winter-peak2,0.0,0.0,11.0,12.0,5.0,11.0,0.0,4.0,9.9,9.9,$/kW,
+electric,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,5.46,5.46,$/kW,
+gas,customer,,,,,,,,,,100.2,100.2,$/month,
+gas,demand,maximum,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,1.77714,0.6275921008023505,$/therm/hr or $/m3/hr,
+gas,energy,,0.0,0.0,1.0,4.0,0.0,24.0,0.0,6.0,0.59966,0.2117682789015708,$/therm or $/m3,
+gas,energy,,3000.0,8495.039999999999,1.0,4.0,0.0,24.0,0.0,6.0,0.57776,0.20403435416431237,$/therm or $/m3,
+gas,energy,,5000.0,14158.4,1.0,4.0,0.0,24.0,0.0,6.0,0.57182,0.2019366595095491,$/therm or $/m3,
+gas,energy,,15000.0,42475.2,1.0,4.0,0.0,24.0,0.0,6.0,0.46404999999999996,0.16387798056277544,$/therm or $/m3,
+gas,energy,,0.0,0.0,5.0,10.0,0.0,24.0,0.0,6.0,0.54571,0.192715984857046,$/therm or $/m3,
+gas,energy,,3000.0,8495.039999999999,5.0,10.0,0.0,24.0,0.0,6.0,0.5050600000000001,0.17836054921460054,$/therm or $/m3,
+gas,energy,,5000.0,14158.4,5.0,10.0,0.0,24.0,0.0,6.0,0.49446,0.17461718838286813,$/therm or $/m3,
+gas,energy,,15000.0,42475.2,5.0,10.0,0.0,24.0,0.0,6.0,0.46403,0.16387091761780992,$/therm or $/m3,
+gas,energy,,0.0,0.0,11.0,12.0,0.0,24.0,0.0,6.0,0.59966,0.2117682789015708,$/therm or $/m3,
+gas,energy,,3000.0,8495.039999999999,11.0,12.0,0.0,24.0,0.0,6.0,0.57776,0.20403435416431237,$/therm or $/m3,
+gas,energy,,5000.0,14158.4,11.0,12.0,0.0,24.0,0.0,6.0,0.57182,0.2019366595095491,$/therm or $/m3,
+gas,energy,,15000.0,42475.2,11.0,12.0,0.0,24.0,0.0,6.0,0.46404999999999996,0.16387798056277544,$/therm or $/m3,

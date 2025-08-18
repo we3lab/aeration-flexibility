@@ -1,0 +1,46 @@
+{
+  "design_point": [1.0, 100.0],
+  "base_wwtp_key": "o2__psa",
+  "upgrade_key": "none__gas_tank__0",
+  "summer_config_template": [
+    {"multiplier": 1.0, "smoothing": 0},
+    {"multiplier": 1.1, "smoothing": 0},
+    {"multiplier": 0.9, "smoothing": 0}
+  ],
+  "tariff_keys_to_run": [
+    "0.0__svcw_d1.0_e1.0_w0",
+    "0.0__svcw_d0.9_e1.0_w0",
+    "0.0__svcw_d1.1_e1.0_w0",
+    "0.0__svcw_d1.0_e0.9_w0",
+    "0.0__svcw_d1.0_e1.1_w0",
+    "0.0__svcw_d1.0_e1.0_wneg0.25",
+    "0.0__svcw_d1.0_e1.0_w0.25",
+    "0.0__svcw_alldemand1.1",
+    "0.0__svcw_alldemand0.9",
+    "0.0__svcw_allenergy1.1",
+    "0.0__svcw_allenergy0.9"
+  ],
+  "data_ingestion": {
+    "shorten_months_run": 2,
+    "scale_factor": 2.963,
+    "ingest_gas": "air"
+  },
+  "design_space": {
+    "o2_range": [0.25, 3.0],
+    "comp_ratio_range": [10.0, 700.0],
+    "designs_per_run": 5,
+    "max_iterations": 4,
+    "n_jobs": 15
+  },
+  "script_settings": {
+    "run_ingest_data": false,
+    "run_solve_optimization": true,
+    "skip_already_run": true,
+    "run_plotting": true,
+    "plot_profiles": false,
+    "plot_psa_detail": false,
+    "plot_summer_mult": false,
+    "plot_capex_vs_lifetime": false,
+    "plot_tornado": true
+  }
+} 

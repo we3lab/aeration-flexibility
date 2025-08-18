@@ -1,0 +1,79 @@
+{
+  "variables": {
+    "base": {
+      "Ndot_b": {"bounds": ["Ndot_b_min", "Ndot_b_max"], "domain": "NonNegativeReals"},
+      "Ndot_b_aer": {"bounds": [1, "Ndot_b_max"], "domain": "NonNegativeReals"},
+      "Ndot_b_excess": {"bounds": [0, "Ndot_b_excess_max"], "domain": "NonNegativeReals"},
+      "Edot_t": {"bounds": [-1e8, "Edot_t_max"], "domain": "Reals"},
+      "Edot_b": {"bounds": [0, "Edot_t_max"], "domain": "NonNegativeReals"},
+      "Edot_c": {"bounds": [0, "Edot_c_max"], "domain": "NonNegativeReals"},
+      "Edot_r": {"bounds": [0, "Edot_r_max"], "domain": "NonNegativeReals"},
+      "Edot_t_net": {"bounds": [-1e8, "Edot_t_max"], "domain": "Reals"},
+      "unmet_o2": {"bounds": [0, "Ndot_b_max"], "domain": "NonNegativeReals"},
+      "tariff_cost": {"bounds": [0, 1e10], "indexed": false, "domain": "Reals"}
+    },
+    "o2_storage": {
+      "N": {"bounds": ["N_min", "N_max"], "domain": "NonNegativeReals"},
+      "Ndot_c": {"bounds": [0, "Ndot_c_max"], "domain": "NonNegativeReals"},
+      "Ndot_r": {"bounds": [0, "Ndot_r_max"], "domain": "NonNegativeReals"},
+      "Edot_r_o2": {"bounds": [0, "Edot_t_max"], "domain": "NonNegativeReals"}
+    },
+    "energy_storage": {
+      "E": {"bounds": [0, "E_max"], "domain": "NonNegativeReals"}
+    },
+    "gas_tank": {
+      "P": {"bounds": ["P_min", "P_max"], "domain": "NonNegativeReals"},
+      "h2_value": {"bounds": [0, 1e8], "indexed": false, "domain": "NonNegativeReals"},
+      "total_h2": {"bounds": [0, 1e8], "indexed": false, "domain": "NonNegativeReals"}
+    }
+  },
+  "parameters": {
+    "indexed": {
+      "Edot_t_baseline": {"domain": "Reals"},
+      "Ndot_target": {"domain": "NonNegativeReals"},
+      "Edot_rem": {"domain": "Reals"},
+      "hourly_solar_multiplier": {"domain": "NonNegativeReals"},
+      "total_fng": {"domain": "NonNegativeReals"}
+    },
+    "non_indexed": {
+      "storage": {
+        "N_min": {"domain": "NonNegativeReals"}, 
+        "N_max": {"domain": "NonNegativeReals"}, 
+        "E_max": {"domain": "NonNegativeReals"}, 
+        "V_tank": {"domain": "NonNegativeReals"}, 
+        "Ndot_b_excess_max": {"domain": "NonNegativeReals"},
+        "P_max": {"domain": "NonNegativeReals"}, 
+        "P_b": {"domain": "NonNegativeReals"}, 
+        "P_min": {"domain": "NonNegativeReals"}, 
+        "P_init": {"domain": "NonNegativeReals"}, 
+        "P_init_base": {"domain": "NonNegativeReals"}, 
+        "starts_per_day": {"domain": "NonNegativeReals"}
+      },
+      "flow_rates": {
+        "Ndot_b_max": {"domain": "NonNegativeReals"}, 
+        "Ndot_b_min": {"domain": "NonNegativeReals"}, 
+        "Ndot_c_max": {"domain": "NonNegativeReals"}, 
+        "Ndot_r_max": {"domain": "NonNegativeReals"}
+      },
+      "energy": {
+        "Edot_b_comp_coeff": {"domain": "NonNegativeReals"}, 
+        "Edot_c_comp_h2_coeff": {"domain": "NonNegativeReals"}, 
+        "Edot_t_max": {"domain": "NonNegativeReals"},  
+        "Edot_c_max": {"domain": "NonNegativeReals"},
+        "Edot_r_max": {"domain": "NonNegativeReals"}
+      },
+      "efficiency": {
+        "ei_o2_base": {"domain": "NonNegativeReals"}, 
+        "ei_o2_new": {"domain": "NonNegativeReals"}, 
+        "ei_evap": {"domain": "NonNegativeReals"}, 
+        "nu_rec": {"domain": "NonNegativeReals"},
+        "eta_comp": {"domain": "NonNegativeReals"}, 
+        "eta_bat": {"domain": "NonNegativeReals"}, 
+        "l_o2": {"domain": "NonNegativeReals"}, 
+        "y_h2": {"domain": "NonNegativeReals"}, 
+        "frac_o2": {"domain": "NonNegativeReals"},
+        "solar_multiplier": {"domain": "NonNegativeReals"}
+      }
+    }
+  }
+}

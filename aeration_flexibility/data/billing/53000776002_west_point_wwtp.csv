@@ -1,0 +1,12 @@
+utility,type,period,basic_charge_limit (imperial),basic_charge_limit (metric),month_start,month_end,hour_start,hour_end,weekday_start,weekday_end,charge (imperial),charge (metric),units,Notes
+electric,customer,,,,,,,,,,330.0,330.0,$/month,
+electric,energy,,0.0,0.0,1.0,12.0,0.0,6.0,0.0,5.0,0.0602,0.0602,$/kWh,
+electric,energy,,0.0,0.0,1.0,12.0,6.0,22.0,0.0,5.0,0.0913,0.0913,$/kWh,
+electric,energy,,0.0,0.0,1.0,12.0,22.0,24.0,0.0,5.0,0.0602,0.0602,$/kWh,
+electric,energy,,0.0,0.0,1.0,12.0,0.0,24.0,6.0,6.0,0.0602,0.0602,$/kWh,
+electric,demand,off-peak,0.0,0.0,1.0,12.0,0.0,24.0,0.0,5.0,0.27,0.27,$/kW,
+electric,demand,on-peak,0.0,0.0,1.0,12.0,6.0,22.0,0.0,5.0,3.85,3.85,$/kW,
+electric,demand,off-peak,0.0,0.0,1.0,12.0,22.0,24.0,0.0,5.0,0.27,0.27,$/kW,
+electric,demand,off-peak,0.0,0.0,1.0,12.0,0.0,24.0,6.0,6.0,0.27,0.27,$/kW,
+gas,customer,,,,,,,,,,33.84,33.84,$/month,
+gas,energy,,0.0,0.0,1.0,12.0,0.0,24.0,0.0,6.0,0.91728,0.32393490789919765,$/therm or $/m3,
