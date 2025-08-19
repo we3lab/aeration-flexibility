@@ -7,7 +7,6 @@ import gc
 import time
 from multiprocessing import Pool
 from helpers.operational_optimization_problem import *
-# from helpers.compressor_power import *
 from helpers.tariffs import *
 from helpers.capex_npv_energy_metrics import *
 from helpers.parameters import *
@@ -100,7 +99,7 @@ def extract_day_results_from_n_day_profile(profile, day_idx, total_days_in_group
 
 def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits, 
                   baseline_val_dict, charge_dict_month, get_param_vals=False, 
-                  prev_demand_dict=None, print_status=True, initial_storage_state=None,
+                  prev_demand_dict=None, initial_storage_state=None,
                   horizon_days=3):
     """
     Process N consecutive days as a single optimization problem.
@@ -116,7 +115,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
         charge_dict_month: Monthly charge dictionary
         get_param_vals: Whether to only get parameter values
         prev_demand_dict: Previous demand dictionary
-        print_status: Whether to print status
         initial_storage_state: Initial storage state for the first day
     
     Returns:
@@ -142,7 +140,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
         initial_storage_state=initial_storage_state, data_wwtp='svcw', horizon_days=horizon_days
     )
     problem.get_new_param_vals()
-    problem_time = time.time() - problem_start
 
     if get_param_vals:
         param_vals = problem.new_param_vals
@@ -205,19 +202,16 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
 
     return None, None, None, None
 
-def get_param_vals_function(date, design_key, base_wwtp_key, upgrade_key, tariff_key, limits, baseline_param_vals,
-                            prev_demand_dict=None, print_status=True, initial_storage_state=None):
+def get_new_param_vals_function(date, design_key, base_wwtp_key, upgrade_key, tariff_key, limits):
     # Create problem instance just to get param vals
     problem = O2Problem(
         single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
-        design_key=design_key, limits=limits, date=date, 
-        initial_storage_state=initial_storage_state, data_wwtp='svcw',
+        design_key=design_key, limits=limits, date=date, data_wwtp='svcw',
     )
     problem.get_new_param_vals()
-
     param_vals = problem.new_param_vals
     del problem  # clean up memory
-    return (param_vals, None, None, None)
+    return param_vals
 
 def find_valid_replacement(date, valid_days):
     """
@@ -326,7 +320,7 @@ def check_design_feasibility(month_results, summer_multiplier, total_days=None):
     return True, None, failed_days
 
 
-def process_design_point_and_month(design_point_data, run_name, intermediate_files=None, print_status=True, horizon_days=3):
+def process_design_point_and_month(design_point_data, run_name, intermediate_files=None, horizon_days=3):
     """Process a single design point and month combination using N-day optimization with 1-day overlap.
 
     Args:
@@ -451,8 +445,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             profiles_dict, new_param_vals, max_values_dict, initial_storage_states_dict = process_n_days(
                 group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits,
                 baseline_val_dict, charge_dict_month, prev_demand_dict=prev_demand_dict,
-                print_status=print_status, initial_storage_state=initial_storage_state,
-                horizon_days=horizon_days
+                initial_storage_state=initial_storage_state, horizon_days=horizon_days
             )
             
             if profiles_dict:
@@ -856,42 +849,26 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
     return opex, monthly_metrics, replacements
 
 
-def calculate_npv(
-    annual_savings, capex, years=10, discount_rate=0.1
-):
-    """Calculate NPV for a given number of years.
-
-    Args:
-        annual_savings: Dictionary of annual savings by component (energy, demand, h2)
-        capex: Capital expenditure
-        years: Number of years to consider (default 10)
-        discount_rate: Discount rate
-
-    Returns:
-        Dictionary with NPV values by component and total
-    """
+def calculate_itemized_npv(electricity_savings_dict, capex, years=10):
     if np.isnan(capex):
         return {
-            "by_component": {k: np.nan for k in annual_savings.keys()},
+            "by_component": {k: np.nan for k in electricity_savings_dict.keys()},
             "total": np.nan,
         }
 
-    npv_by_component = {}
-    total_npv = -capex
+    npv_dict = {"from capex": capex, "total": capex, "by_component": {}}
+    for component, savings in electricity_savings_dict.items():
+        component_value = metrics.net_present_value(
+            capital_cost=0,
+            electricity_savings=savings,
+            maintenance_diff=0,
+            timestep=0.25,
+            upgrade_lifetime=years,
+            )  # using default interest rate of 0.03
+        npv_dict["by_component"][component] = component_value
+        npv_dict["total"] += component_value
 
-    for year in range(1, years + 1):
-        discount_factor = 1 / (1 + discount_rate) ** year
-        for component, savings in annual_savings.items():
-            if component not in npv_by_component:
-                npv_by_component[component] = 0
-            npv_by_component[component] += savings * discount_factor
-            total_npv += savings * discount_factor
-
-    return {
-        "by_component": npv_by_component,
-        "from capex": capex,
-        "total": total_npv,
-    }
+    return npv_dict
 
 
 def get_max_dict_from_profile(profile, demand_charge_info_dict):
@@ -980,8 +957,6 @@ def run_configuration(
     max_iterations,
     skip_already_run=True,
     Ndot_b_max=None,
-    print_status=True,
-    ingest_gas=None,
     horizon_days=3,
 ):
     """Run optimization for a single configuration.
@@ -996,7 +971,6 @@ def run_configuration(
         max_iterations: Maximum number of optimization iterations
         skip_already_run: Whether to skip already completed runs
         Ndot_b_max: Maximum blower flow rate
-        print_status: Whether to print status messages
         ingest_gas: Gas ingestion configuration
         horizon_days: Number of days to process in each rolling horizon (default 3)
     """
@@ -1171,10 +1145,6 @@ def run_configuration(
     # Main optimization loop
     while iteration < max_iterations:
         print(f"iteration {iteration}")
-        
-        # Print insights about current state
-        if iteration > 0 and len(all_results) > 0:
-            print_optimization_insights(all_results, iteration)
 
         # Get design points for this iteration
         if iteration == 0:
@@ -1262,10 +1232,8 @@ def run_configuration(
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
             # Get param values from first valid day
-            first_date = next(iter(day_profiles))
-            param_values, _, _, _ = get_param_vals_function(first_date, design_key, base_wwtp_key, upgrade_key,
-                                              tariff_key, limits, baseline_val_dict[first_date],
-            )
+            param_values = get_new_param_vals_function(next(iter(day_profiles)), design_key, base_wwtp_key,
+                                              upgrade_key, tariff_key, limits)
 
             for month_key_and_days in month_to_days.items():
                 job_queue.append((design_key, month_key_and_days, base_wwtp_key, upgrade_key, tariff_key,
@@ -1301,7 +1269,7 @@ def run_configuration(
                 
                 # Submit job
                 async_result = pool.apply_async(process_design_point_and_month, 
-                                                args=(job_data, run_name, intermediate_files, print_status, horizon_days))
+                                                args=(job_data, run_name, intermediate_files, horizon_days))
                 pending_jobs[async_result] = (job_index, design_key)
                 job_index += 1
             
@@ -1338,7 +1306,7 @@ def run_configuration(
                             
                             # Submit job
                             async_result = pool.apply_async(process_design_point_and_month, 
-                                                            args=(job_data, run_name, intermediate_files, print_status, horizon_days))
+                                                            args=(job_data, run_name, intermediate_files, horizon_days))
                             pending_jobs[async_result] = (job_index, design_key)
                             job_index += 1
                             break
@@ -1550,7 +1518,7 @@ def run_configuration(
                 )
             )
             
-            npv = calculate_npv(
+            npv = calculate_itemized_npv(
                 annual_savings=annual_savings,
                 capex=capex
             )
@@ -1568,12 +1536,10 @@ def run_configuration(
                 }
             )
 
-            # Combine all metrics into final result
+            # Store results
             annual_metrics.update(
                 {"npv": npv, "capex": capex, "tank_metrics": tank_metrics}
             )
-
-            # Store results
             all_results[design_key] = {
                 "design_key": design_key,
                 "metrics": {
@@ -1612,81 +1578,6 @@ def run_configuration(
         "mu_sigma_history": mu_sigma_history,
         "sampled_points_history": sampled_points_history,
     }
-    
     with open(f"aeration_flexibility/output_data/{run_name}/{config_name}.pkl", "wb") as f:
         pickle.dump(results_data, f)
-    
-    # Return results for potential use by calling functions
     return results_data
-
-
-def analyze_best_designs(all_results, top_k=5):
-    """
-    Analyze the top-k best designs to provide insights about the optimization progress.
-    
-    Args:
-        all_results: Dictionary of all design results
-        top_k: Number of top designs to analyze
-    
-    Returns:
-        Dictionary with analysis results
-    """
-    # Get valid designs with their NPVs
-    valid_designs = []
-    for design_key, design_data in all_results.items():
-        npv = design_data.get("metrics", {}).get("npv", {}).get("total")
-        if is_valid_npv(npv):
-            valid_designs.append((design_key, npv))
-    
-    if not valid_designs:
-        return {"error": "No valid designs found"}
-    
-    # Sort by NPV (descending)
-    valid_designs.sort(key=lambda x: x[1], reverse=True)
-    top_designs = valid_designs[:top_k]
-    
-    # Extract hours and compression ratios
-    hours, ratios, npvs = [], [], []
-    for design_key, npv in top_designs:
-        try:
-            h, r = map(float, design_key.split("__"))
-            hours.append(h)
-            ratios.append(r)
-            npvs.append(npv)
-        except (ValueError, IndexError):
-            continue
-    
-    if not hours:
-        return {"error": "Could not parse design keys"}
-    
-    # Calculate statistics
-    analysis = {
-        "top_designs": top_designs,
-        "hours_range": (min(hours), max(hours)),
-        "ratios_range": (min(ratios), max(ratios)),
-        "npv_range": (min(npvs), max(npvs)),
-        "hours_mean": np.mean(hours),
-        "ratios_mean": np.mean(ratios),
-        "hours_std": np.std(hours),
-        "ratios_std": np.std(ratios),
-        "best_npv": max(npvs),
-        "worst_npv_in_top": min(npvs),
-        "npv_spread": max(npvs) - min(npvs)
-    }
-    
-    return analysis
-
-
-def print_optimization_insights(all_results, iteration):
-    """
-    Print insights about the current optimization state.
-    
-    Args:
-        all_results: Dictionary of all design results
-        iteration: Current iteration number
-    """
-    analysis = analyze_best_designs(all_results, top_k=5)
-    
-    if "error" in analysis:
-        print(f"  Iteration {iteration}: {analysis['error']}")
-        return

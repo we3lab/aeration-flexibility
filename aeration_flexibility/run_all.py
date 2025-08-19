@@ -15,8 +15,6 @@ from helpers.design_optimization_algorithm import run_configuration
 from helpers.config_labels import get_unique_configurations, WWTP_TYPES
 from helpers.parameters import get_summer_key
 
-print_status=False
-
 def extract_config_values(config):
     """Extract all configuration values from config dictionary."""
 
@@ -40,12 +38,10 @@ def extract_config_values(config):
         "n_jobs": config["design_space"]["n_jobs"],
         "run_ingest_data": config["script_settings"]["run_ingest_data"],
         "run_solve_optimization": config["script_settings"]["run_solve_optimization"],
-        "skip_already_run": config["script_settings"]["skip_already_run"],
         "run_plotting": config["script_settings"]["run_plotting"],
         "figure_2": config["script_settings"]["figure_2"],
-        "plot_summer_mult": config["script_settings"]["plot_summer_mult"],
-        "plot_capex_vs_lifetime":  config["script_settings"]["plot_capex_vs_lifetime"],
-        "plot_tornado": config["script_settings"]["plot_tornado"],
+        "figure_4": config["script_settings"]["figure_4"],
+        "figure_3": config["script_settings"]["figure_3"],
     }
 
 
@@ -106,38 +102,17 @@ def build_run_configs(summer_config_template, upgrade_keys, tariff_keys_to_run, 
 
 
 def main():
-    """Main function to run analysis based on configuration."""
-    # Parse command line arguments
-    if len(sys.argv) > 1:
-        config_file = sys.argv[1]
-    else:
-        config_file = "configs/run_20250629.json"
-
-    # load config
+    # Load config
+    config_file = sys.argv[1]  # command line argument for config
     config_path = os.path.join(os.path.dirname(__file__), config_file)
     with open(config_path, "r") as f:
         config = json.load(f)
     run_name_from_file = os.path.splitext(os.path.basename(config_file))[0]
     config["run_name_from_file"] = run_name_from_file
-    
     config_values = extract_config_values(config)
-
-    run_configs = build_run_configs(
-        config_values["summer_config_template"],
-        config_values["upgrade_keys"],
-        config_values["tariff_keys_to_run"],
-        config
-    )
-
-    # Only get unique configurations if we need them for optimization
-    unique_configs = None
-    if config_values["run_solve_optimization"]:
-        unique_configs = get_unique_configurations(run_configs)
-        print(f"Found {len(unique_configs)} unique configurations")
-
+        
     # Data ingestion
     if config_values["run_ingest_data"]:
-        print("Running data ingestion...")
         ingest_data(
             run_name=config_values["base_run_name"],
             ingest_gas=config_values["ingest_gas"],
@@ -146,11 +121,16 @@ def main():
         )
 
     # Optimization
+    unique_configs = None
     if config_values["run_solve_optimization"]:
-        print("Running optimization...")
+        run_configs = build_run_configs(
+            config_values["summer_config_template"],
+            config_values["upgrade_keys"],
+            config_values["tariff_keys_to_run"],
+            config
+        )
+        unique_configs = get_unique_configurations(run_configs)
         for config_item in unique_configs:
-            # run_configuration now returns results, but we don't need to store them here
-            # as they are already saved to disk
             run_configuration(
                 config_item,
                 config_values["base_run_name"],
@@ -159,22 +139,18 @@ def main():
                 config_values["comp_ratio_range"],
                 config_values["n_jobs"],
                 config_values["max_iterations"],
-                skip_already_run=config_values["skip_already_run"],
-                print_status=print_status,
-                ingest_gas=config_values["ingest_gas"],
                 horizon_days=3
             )
 
     # Plotting
     if config_values["run_plotting"]:
-        print("Generating plots...")
         generate_plots(
             run_name=config_values["base_run_name"],
             run_configs=run_configs,
             location_lookup=get_tariff_configs(),
             figure_2=config_values["figure_2"],
-            plot_summer_mult=config_values["plot_summer_mult"],
-            figure_3=config_values["plot_tornado"],
+            figure_4=config_values["figure_4"],
+            figure_3=config_values["figure_3"],
             run_config=config
         )
 

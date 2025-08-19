@@ -14,7 +14,7 @@
   "tariff_keys_to_run": ["0.0__svcw"],
   "data_ingestion": {
     "shorten_months_run": 6,
-    "scale_factor": 2.96,
+    "scale_factor": 1.0,
     "ingest_gas": "air"
   },
   "design_space": {

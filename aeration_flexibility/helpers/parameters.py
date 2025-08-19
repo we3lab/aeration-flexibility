@@ -71,10 +71,8 @@ T_room = 20 + 298  # temperature in kelvin
 P_MAX_H2 = 35.0  # MPa
 
 # Finances
-interest_rate = 0.02  # percent
 payback_period = 30  # payback period in years
 payback_period_days = payback_period * 365  # days during payback period
-discount_rate = 0.03
 inflation_rate = 0.01
 days_per_month = 30
 operating_rate = 0.01

@@ -13,7 +13,7 @@ from matplotlib import ticker
 from scipy.interpolate import griddata, RBFInterpolator
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 
-from helpers.design_optimization_algorithm import calculate_npv
+from helpers.design_optimization_algorithm import calculate_itemized_npv
 from helpers.parameters import *
 from helpers.config_labels import *
 
@@ -903,11 +903,10 @@ def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None
             
             # For each lifetime (years)
             for years in range(5, 31):
-                npv = calculate_npv(
+                npv = calculate_itemized_npv(
                     annual_savings,
                     capex,
-                    years=years,
-                    discount_rate=0.1,
+                    years=years
                 )
                 total_npv = npv["total"]
                 capex_list.append(capex / 1e6)  # US$M
@@ -1300,7 +1299,7 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
 
 
 def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
-                   figure_2=False, plot_summer_mult=False, 
+                   figure_2=False, figure_4=False, 
                    figure_3=False, run_config=None):
         
     results = load_results_from_files(run_name)
@@ -1337,7 +1336,7 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
         figure_2_function(run_name, suffix, None, npv_data=consolidate_npv_data(results, {}),
         location_lookup=location_lookup, results=results)
 
-    if plot_summer_mult:
+    if figure_4:
         multipliers = [config_item["multiplier"] for config_item in run_config["summer_config_template"]]
         o2_range = run_config["design_space"]["o2_range"]
         hours_range = np.linspace(o2_range[0], o2_range[1], 50)  # Use actual config range and increase resolution

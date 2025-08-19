@@ -52,17 +52,15 @@
     "comp_ratio_range": [10.0, 700.0],
     "designs_per_run": 5,
     "max_iterations": 2,
-    "n_jobs": 31
+    "n_jobs": 16
   },
   "script_settings": {
     "run_ingest_data": false,
     "run_solve_optimization": true,
-    "skip_already_run": true,
     "run_plotting": true,
     "plot_profiles": false,
     "figure_2": false,
-    "plot_summer_mult": true,
-    "plot_capex_vs_lifetime": false,
-    "plot_tornado": false
+    "figure_4": true,
+    "figure_3": false
   }
 } 

@@ -4,7 +4,6 @@ import pandas as pd
 import os
 from helpers.parameters import *
 from helpers.tariffs import *
-from electric_emission_cost import costs, metrics
 
 cost_per_m3 = 10000  # material cost in $/m^3
 labor_per_m2 = 100  # labor cost per m2 constructed

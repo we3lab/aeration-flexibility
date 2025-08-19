@@ -60,7 +60,7 @@ def get_tariff_key_labels(tariff_keys):
     tariff_key_labels = {}
     
     for tariff_key in tariff_keys:
-        # Handle baseline case
+        # Baseline case
         if tariff_key.endswith("__billing") or tariff_key == "billing":
             tariff_key_labels[tariff_key] = "Baseline Tariff"
             continue

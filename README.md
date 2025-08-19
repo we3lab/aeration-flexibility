@@ -92,7 +92,6 @@ aeration_flexibility/
   "script_settings": {
     "run_ingest_data": true,
     "run_solve_optimization": true,
-    "skip_already_run": true,
     "run_plotting": true
   }
 }
@@ -128,7 +127,6 @@ aeration_flexibility/
   "script_settings": {
     "run_ingest_data": false,
     "run_solve_optimization": true,
-    "skip_already_run": true,
     "run_plotting": true
   }
 }
