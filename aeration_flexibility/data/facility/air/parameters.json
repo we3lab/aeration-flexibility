@@ -13,8 +13,8 @@
          ],
          "exclude_dts": [],
          "source_path": [
-            "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-            "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+            "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+            "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
          ],
          "cogen_efficiency_range": [],
          "consec_nan_limit": 0
@@ -28,8 +28,8 @@
          "AerationBasin_Blower_Power": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AerationBasin_Blower_Power",
                "to_numeric": true,
@@ -81,8 +81,8 @@
          "AerationBasin_Mixers_Power": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AerationBasin_Mixers_Power",
                "to_numeric": true,
@@ -134,8 +134,8 @@
          "AerationBasin_TotalAerationPower": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AerationBasin_TotalAerationPower",
                "to_numeric": true,
@@ -187,8 +187,8 @@
          "Battery_Electricity_NetFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "Battery(KW)",
                "to_numeric": true,
@@ -240,8 +240,8 @@
          "Blower_1_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16101.ScldAnlgS",
                "to_numeric": true,
@@ -290,8 +290,8 @@
          "Blower_2_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16102.ScldAnlgS",
                "to_numeric": true,
@@ -340,8 +340,8 @@
          "Blower_3_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16201.ScldAnlgS",
                "to_numeric": true,
@@ -390,8 +390,8 @@
          "Blower_4_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16202.ScldAnlgS",
                "to_numeric": true,
@@ -440,8 +440,8 @@
          "Blower_5_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16301.ScldAnlgS",
                "to_numeric": true,
@@ -490,8 +490,8 @@
          "Blower_6_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16302.ScldAnlgS",
                "to_numeric": true,
@@ -540,8 +540,8 @@
          "Blower_7_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16401.ScldAnlgS",
                "to_numeric": true,
@@ -590,8 +590,8 @@
          "Blower_8_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "AB_MON_FIT_16402.ScldAnlgS",
                "to_numeric": true,
@@ -640,8 +640,8 @@
          "Blower_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "Blower_AerationBasin_Air_Flow",
                "to_numeric": true,
@@ -690,8 +690,8 @@
          "Cogenerator_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "CGN_ENG_DAILY_DATA.CGN_NET_ELECTRICITY_KWH",
                "to_numeric": true,
@@ -722,7 +722,10 @@
                   0,
                   2607.96
                ],
-               "outlier_chg_cutoff": [],
+               "outlier_chg_cutoff": [
+                  -50,
+                  500
+               ],
                "custom_clean_bool": [],
                "custom_clean_function": {
                   "method": "",
@@ -743,8 +746,8 @@
          "LiftPump_PrimaryClarifier_UntreatedSewage_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "FEP_INFLUENT_FLOW.PV",
                "to_numeric": true,
@@ -793,8 +796,8 @@
          "PowerGrid_SVCW_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "CGN_ENG_DAILY_DATA.PLANT_PURCHASED_KWH",
                "to_numeric": true,
@@ -846,8 +849,8 @@
          "PowerGrid_SVCW_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "PowerGrid_SVCW_VirtualDemand_Electricity_Flow",
                "to_numeric": true,
@@ -879,7 +882,7 @@
                   3000
                ],
                "outlier_chg_cutoff": [
-                  -20,
+                  -50,
                   1000
                ],
                "custom_clean_bool": [],
@@ -902,8 +905,8 @@
          "VirtualDemand_Electricity_InFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "VirtualDemand_Electricity_InFlow",
                "to_numeric": true,
@@ -934,7 +937,10 @@
                   0,
                   3000
                ],
-               "outlier_chg_cutoff": [],
+               "outlier_chg_cutoff": [
+                  -50,
+                  500
+               ],
                "custom_clean_bool": [],
                "custom_clean_function": {
                   "method": "",
@@ -955,8 +961,8 @@
          "VirtualDemand_RestOfFacilityPower": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/20220701_20240318_SVCW_RawData.csv",
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/air/battery_power_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/20220701_20240318_SVCW_RawData.csv",
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/air/battery_power_data.csv"
                ],
                "SCADA_tag": "VirtualDemand_RestOfFacilityPower",
                "to_numeric": true,
@@ -987,7 +993,10 @@
                   0,
                   3000
                ],
-               "outlier_chg_cutoff": [],
+               "outlier_chg_cutoff": [
+                  -50,
+                  500
+               ],
                "custom_clean_bool": [],
                "custom_clean_function": {
                   "method": "",
@@ -1173,7 +1182,7 @@
                   3000
                ],
                "outlier_chg_cutoff": [
-                  -20,
+                  -50,
                   500
                ],
                "custom_clean_bool": [],
@@ -1226,7 +1235,7 @@
                   3000
                ],
                "outlier_chg_cutoff": [
-                  -20,
+                  -50,
                   500
                ],
                "custom_clean_bool": [],
@@ -1322,7 +1331,7 @@
                   4000
                ],
                "outlier_chg_cutoff": [
-                  -20,
+                  -50,
                   500
                ],
                "custom_clean_bool": [],
@@ -1605,7 +1614,10 @@
             "cleaning": {
                "clean_tukey": false,
                "outlier_cutoff": [],
-               "outlier_chg_cutoff": [],
+               "outlier_chg_cutoff": [
+                  -50,
+                  500
+               ],
                "custom_clean_bool": [],
                "custom_clean_function": {
                   "method": "",

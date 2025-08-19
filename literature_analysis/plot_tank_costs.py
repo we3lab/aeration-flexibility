@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 
-from ..oxygen_storage.helpers.capex_npv_energy_metrics import get_tank_cost, get_tank_cost_literature, get_tank_cost_literature_by_vol
+from ..aeration_flexibility.helpers.capex_npv_energy_metrics import get_tank_cost, get_tank_cost_literature, get_tank_cost_literature_by_vol
 
 def plot_tank_costs():
     """Create tank cost plots for different pressure ranges."""

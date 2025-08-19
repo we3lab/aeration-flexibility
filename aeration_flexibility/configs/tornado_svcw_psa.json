@@ -38,7 +38,7 @@
     "skip_already_run": true,
     "run_plotting": true,
     "plot_profiles": false,
-    "plot_psa_detail": false,
+    "figure_2": false,
     "plot_summer_mult": false,
     "plot_capex_vs_lifetime": false,
     "plot_tornado": true

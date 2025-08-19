@@ -351,7 +351,7 @@ class O2Problem:
             
     
         solver = pyo.SolverFactory(
-            "ipopt", options={"max_iter": 1000, "tol": 1e-3}
+            "ipopt", options={"max_iter": 1000, "tol": 1e-2}
         )
         try: 
             results = solver.solve(self.m, tee=False)
@@ -830,7 +830,7 @@ class O2Problem:
     def solve_optimization_day(self, tee=False):
         start_time = time.time()
         try:
-            solver_config = {"max_iter": 5000, "tol": 1e-6}
+            solver_config = {"max_iter": 5000, "tol": 1e-5}
             solver = pyo.SolverFactory("ipopt")
             solver.options.update(solver_config)
             results = solver.solve(self.m, tee=tee)

@@ -263,7 +263,7 @@ def extract_final_storage_state(profile):
 
 def load_intermediate_results(run_name, config_name):
     """Load file paths of already-solved intermediate results if available."""
-    intermediate_dir = f"oxygen_storage/output_data/{run_name}/intermediate/{config_name}"
+    intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
     intermediate_dir = os.path.abspath(intermediate_dir)  # Convert to absolute path
     
     if not os.path.exists(intermediate_dir):
@@ -363,7 +363,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
         summer_smoothing_int = int(summer_smoothing)
     suffix = get_summer_key(summer_multiplier, summer_smoothing_int)
     config_name = get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix)
-    intermediate_dir = f"oxygen_storage/output_data/{run_name}/intermediate/{config_name}"
+    intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
     os.makedirs(intermediate_dir, exist_ok=True)    
     
     # Track failures for early exit
@@ -797,6 +797,7 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
             resolution="15m",
             desired_utility="electric",
             desired_charge_type=key,
+            decompose_exports=True
         )[0]
 
         baseline_cost = costs.calculate_cost(
@@ -805,6 +806,7 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
             resolution="15m",
             desired_utility="electric",
             desired_charge_type=key,
+            decompose_exports=True
         )[0]
 
         opex["new"][key] = new_cost
@@ -855,7 +857,7 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
 
 
 def calculate_npv(
-    annual_savings, capex, counterfactual_capex=0, years=10, discount_rate=0.1
+    annual_savings, capex, years=10, discount_rate=0.1
 ):
     """Calculate NPV for a given number of years.
 
@@ -875,7 +877,7 @@ def calculate_npv(
         }
 
     npv_by_component = {}
-    total_npv = -capex + counterfactual_capex
+    total_npv = -capex
 
     for year in range(1, years + 1):
         discount_factor = 1 / (1 + discount_rate) ** year
@@ -888,7 +890,6 @@ def calculate_npv(
     return {
         "by_component": npv_by_component,
         "from capex": capex,
-        "from capex savings": counterfactual_capex,
         "total": total_npv,
     }
 
@@ -1002,7 +1003,7 @@ def run_configuration(
     # Use base_run_name directly instead of adding suffix to run_name
     run_name = base_run_name
 
-    output_dir = f"oxygen_storage/output_data/{run_name}"
+    output_dir = f"aeration_flexibility/output_data/{run_name}"
     os.makedirs(output_dir, exist_ok=True)
 
     base_wwtp_key = config["base_wwtp_key"]
@@ -1015,7 +1016,7 @@ def run_configuration(
     # Create config_name with summer suffix included
     config_name = get_config_name(base_wwtp_key, config['upgrade_key'], config['tariff_key'], suffix)
 
-    if skip_already_run and os.path.exists(f"oxygen_storage/output_data/{run_name}/{config_name}.pkl"):
+    if skip_already_run and os.path.exists(f"aeration_flexibility/output_data/{run_name}/{config_name}.pkl"):
         print(f"Skipping {config_name}")
         return
 
@@ -1025,7 +1026,7 @@ def run_configuration(
     intermediate_files = load_intermediate_results(run_name, config_name)
 
     # Load day profiles
-    with open(f"oxygen_storage/output_data/{run_name}/day_profiles.pkl", "rb") as f:
+    with open(f"aeration_flexibility/output_data/{run_name}/day_profiles.pkl", "rb") as f:
         day_profiles = pickle.load(f)
 
     gas, o2_tech_base, summer_multiplier, summer_smoothing = split_key(base_wwtp_key)
@@ -1273,7 +1274,7 @@ def run_configuration(
         # Create parent directories for intermediate results
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
-            intermediate_dir = f"oxygen_storage/output_data/{run_name}/intermediate/{config_name}"
+            intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
             os.makedirs(intermediate_dir, exist_ok=True)
 
         # Track infeasible design points to prune smaller hours
@@ -1551,9 +1552,9 @@ def run_configuration(
             
             npv = calculate_npv(
                 annual_savings=annual_savings,
-                capex=capex,
-                counterfactual_capex=counterfactual_capex,
+                capex=capex
             )
+            npv["from capex savings"] = counterfactual_capex
             print(
                 f" {design_key} NPV energy ${npv['by_component']['energy']:,.2f} demand ${npv['by_component']['demand']:,.2f} export ${npv['by_component']['export']:,.2f} H2 ${npv['by_component']['h2']:,.2f} Total ${npv['total']:,.2f} capex {capex}"
             )
@@ -1612,7 +1613,7 @@ def run_configuration(
         "sampled_points_history": sampled_points_history,
     }
     
-    with open(f"oxygen_storage/output_data/{run_name}/{config_name}.pkl", "wb") as f:
+    with open(f"aeration_flexibility/output_data/{run_name}/{config_name}.pkl", "wb") as f:
         pickle.dump(results_data, f)
     
     # Return results for potential use by calling functions

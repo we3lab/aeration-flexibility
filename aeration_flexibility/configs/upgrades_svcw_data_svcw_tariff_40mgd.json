@@ -25,11 +25,11 @@
     "n_jobs": 31
   },
   "script_settings": {
-    "run_ingest_data": true,
+    "run_ingest_data": false,
     "run_solve_optimization": true,
     "skip_already_run": true,
     "run_plotting": true,
-    "plot_psa_detail": true,
+    "figure_2": true,
     "plot_summer_mult": false,
     "plot_capex_vs_lifetime": true,
     "plot_tornado": false

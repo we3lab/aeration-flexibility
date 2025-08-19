@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from ..oxygen_storage.helpers.parameters import cb_palette
+from ..aeration_flexibility.helpers.parameters import cb_palette
 import os
 
 # cwd = os.getcwd()

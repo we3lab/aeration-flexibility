@@ -18,7 +18,6 @@ from helpers.parameters import *
 from helpers.config_labels import *
 
 
-# Helper Functions for Data Processing
 def npv_to_delta_lcot(npv, years=20, mgd=PLANT_CAPACITY_MGD, baseline_lcot=1.00):
     """Convert NPV to delta LCOT as percentage change relative to baseline LCOT"""
     m3_per_day = mgd * MGD_TO_M3_PER_DAY
@@ -40,6 +39,7 @@ def is_valid_npv(npv):
         return is_valid
     is_valid = np.isfinite(float(npv))
     return is_valid
+
 
 def get_output_dir(run_name, subdir=None):
     """Get standardized output directory path."""
@@ -95,7 +95,6 @@ def get_design_data(config_data):
     return all_results, best_design_key
 
 
-# Helper Functions for Plotting
 def get_custom_lcot_cmap(n_levels=60, is_npv=False):
     """
     Args:
@@ -111,33 +110,6 @@ def get_custom_lcot_cmap(n_levels=60, is_npv=False):
     cmap = LinearSegmentedColormap.from_list("custom_lcot", list(zip(positions, colors)), N=n_levels)
     cmap.set_bad("black")
     return cmap
-
-
-def get_legend_handler_map():
-    """Get the legend handler map for custom patch rendering.
-    Created by Claude"""
-
-    def custom_patch_func(
-        legend, orig_handle, xdescent, ydescent, width, height, fontsize
-    ):
-        """Custom function to draw patches with thicker hatch patterns."""
-        p = plt.Rectangle(
-            (xdescent, ydescent),
-            width,
-            height,
-            facecolor=orig_handle.get_facecolor(),
-            edgecolor="black",
-            linewidth=1.5,
-            alpha=0.8,
-            hatch=orig_handle.get_hatch(),
-        )
-        # Increase hatch density and thickness
-        hatch = orig_handle.get_hatch()
-        if hatch is not None:
-            p.set_hatch(hatch * 2)  # Double the hatch density
-        return p
-
-    return {plt.Rectangle: HandlerPatch(patch_func=custom_patch_func)}
 
 
 def _plot_lcot_grid(hours, ratios, lcots, grid_size=400):
@@ -179,6 +151,7 @@ def _plot_lcot_grid(hours, ratios, lcots, grid_size=400):
     
     return xi, yi, zi
 
+
 def setup_plot_style(ax, title=None, xlabel=None, ylabel=None, fontsize=12):
     if title:
         ax.set_title(title, fontsize=fontsize)
@@ -219,50 +192,6 @@ def get_valid_design_keys(all_results):
             print(f" Invalid NPV for {k}: {npv}")
     return valid_keys
 
-   
-def _plot_lcot_heatmap_on_ax(
-    ax,
-    hours,
-    ratios,
-    lcots,
-    title,
-    add_colorbar=True,
-):
-    """Plot LCOT heatmap on the given axis."""
-    # Create grid for interpolation
-    xi, yi, zi = _plot_lcot_grid(hours, ratios, lcots)
-    
-    if xi is None or yi is None or zi is None:
-        print("Warning: Could not create grid for heatmap")
-        return None, None
-
-    cmap = get_custom_lcot_cmap()
-    # Determine min, max for LCOT normalization
-    z_min = np.nanmin(zi)
-    z_max = np.nanmax(zi)
-    if not (np.isfinite(z_min) and np.isfinite(z_max)):
-        print("Warning: Cannot create heatmap - all NaN values")
-        return None, None
-    absmax = max(abs(z_min), abs(z_max))
-    norm = TwoSlopeNorm(vmin=-absmax, vcenter=0, vmax=absmax)
-
-    # Plot heatmap
-    im = ax.pcolormesh(xi, yi, zi, cmap=cmap, shading="auto", norm=norm)
-
-    # Add colorbar
-    cbar = None
-    if add_colorbar:
-        cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label("Change in LCOT ($/m3)")
-    scatter = ax.scatter(
-        hours, ratios, c=lcots, cmap=cmap, edgecolor="black", s=50, norm=norm
-    )  # actual data points
-
-    setup_plot_style(ax, title=title, xlabel="Hours of O$_2$ Storage", ylabel="Compression Ratio")
-    ax.set_ylim(min(ratios), max(ratios))
-    ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.2f"))
-
-    return im, scatter
 
 def _get_energy_plot_config():
     """Get configuration for energy plot styling."""
@@ -548,6 +477,27 @@ def plot_npv_bars(npv_data, ax=None):
     )
     all_handles = upgrade_handles + cost_handles_filtered
     upgrade_cols = len(upgrade_handles)
+
+    def custom_patch_func(
+        legend, orig_handle, xdescent, ydescent, width, height, fontsize
+    ):
+        """Custom function to draw patches with thicker hatch patterns.
+        Created by Claude"""
+        p = plt.Rectangle(
+            (xdescent, ydescent),
+            width,
+            height,
+            facecolor=orig_handle.get_facecolor(),
+            edgecolor="black",
+            linewidth=1.5,
+            alpha=0.8,
+            hatch=orig_handle.get_hatch(),
+        )
+        hatch = orig_handle.get_hatch()
+        if hatch is not None:
+            p.set_hatch(hatch * 2)  # Double the hatch density
+        return p
+
     ax.legend(
         handles=all_handles,
         bbox_to_anchor=(0.5, 1.08),
@@ -556,40 +506,8 @@ def plot_npv_bars(npv_data, ax=None):
         frameon=False,
         fontsize=24,
         bbox_transform=plt.gcf().transFigure,
-        handler_map=get_legend_handler_map(),
+        handler_map={plt.Rectangle: HandlerPatch(patch_func=custom_patch_func)},
     )
-
-
-def _prepare_day_data(profile_data, day):
-    """Prepare day data for technology profiles."""
-    # Find any available date key (don't rely on hardcoded date)
-    available_keys = list(profile_data.keys())
-    if not available_keys:
-        raise ValueError("No profile data available")
-    
-    # If day is None or not found, use the first available date
-    if day is None:
-        day_key = available_keys[0]
-        print(f"No specific date requested, using first available: {day_key}")
-    else:
-        # Try to find the requested day first, otherwise use the first available
-        day_key = next((key for key in available_keys if day in key), available_keys[0])
-        if day_key != day:
-            print(f"Using available date {day_key} instead of requested {day}")
-    
-    day_data = profile_data[day_key].copy()
-    day_data["Ndot_b_aer_kg_hr"] = moles_to_mass(day_data["Ndot_b_aer"], M_O2)
-    day_data["Ndot_target_kg_hr"] = moles_to_mass(day_data["Ndot_target"], M_O2)
-    day_data["Edot_r_tot"] = day_data["Edot_r"] - day_data.get("Edot_r_o2", 0)
-    
-    # Round small values to zero, but only for numeric arrays
-    for key in day_data:
-        if isinstance(day_data[key], (list, np.ndarray)) and len(day_data[key]) > 0:
-            # Check if the first element is numeric
-            if isinstance(day_data[key][0], (int, float, np.number)):
-                day_data[key] = np.array([x if abs(x) >= 50 else 0 for x in day_data[key]])
-    
-    return day_data
 
 
 def si_cem_figure(results, run_name, output_dir):
@@ -677,9 +595,17 @@ def si_cem_figure(results, run_name, output_dir):
                     f"mvn_exploration_{base_wwtp_key}__{upgrade_key}__{tariff_key}_{label}.png"))
 
 
+def _add_storage_tank(ax, x, y, side, volume, label, color, zorder_offset=0):
+    rect = plt.Rectangle((x, y), side, side, facecolor=color, zorder=2+zorder_offset)
+    ax.add_patch(rect)
+    ax.text(x + side/2, y + side*2, f"{label}\n{volume:,.0f} m³",
+            ha="center", va="center", color="black", fontsize=16, 
+            weight="bold", zorder=6+zorder_offset)
 
-def _extract_storage_volumes(results, tariff_key):
-    """Extract storage volumes from results."""
+
+def plot_storage_vs_bioreactor_volume(results, run_name, output_dir, tariff_key="0.0__svcw"):
+    """Plot storage volumes compared to bioreactor volume."""
+    V_bioreactor = Q * HRT_DAYS
     grouped = {}
     
     for config_key, config_data in results.items():
@@ -700,57 +626,6 @@ def _extract_storage_volumes(results, tariff_key):
             P_max_h2 = 35e6  # 35 MPa in Pa
             V_h2 = (N_max_h2 * 8.314 * 293) / P_max_h2  # Ideal gas law, T=20C
         grouped.setdefault(base_wwtp_key, {}).setdefault(upgrade_key, []).append((V_o2, V_h2))
-    
-    return grouped
-
-
-def _add_storage_tank(ax, x, y, side, volume, label, color, zorder_offset=0):
-    rect = plt.Rectangle((x, y), side, side, facecolor=color, zorder=2+zorder_offset)
-    ax.add_patch(rect)
-    ax.text(x + side/2, y + side*2, f"{label}\n{volume:,.0f} m³",
-            ha="center", va="center", color="black", fontsize=16, 
-            weight="bold", zorder=6+zorder_offset)
-
-
-def _create_storage_plot(V_bioreactor, V_o2, V_h2, base_wwtp_key, upgrade_key):
-    """Create a single storage vs bioreactor volume plot."""
-    # Calculate scaling
-    max_vol = max([V_bioreactor] + [V_o2 if V_o2 is not None else 0] + [V_h2 if V_h2 is not None else 0])
-    scale = 1.0 / np.sqrt(max_vol)
-    min_side = 0.02
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Bioreactor
-    side_bio = np.sqrt(V_bioreactor) * scale
-    rect_bio = plt.Rectangle((0, 0), side_bio, side_bio, facecolor="#e0e0e0", zorder=0)
-    ax.add_patch(rect_bio)
-    ax.text(side_bio/2, side_bio/2, f"Bioreactor\n{V_bioreactor:,.0f} m³",
-            ha="center", va="center", fontsize=20, weight="bold", color="black", zorder=5)
-
-    # O2 tank
-    if V_o2 is not None:
-        side_o2 = max(np.sqrt(V_o2) * scale, min_side)
-        _add_storage_tank(ax, 0.02, 0.02, side_o2, V_o2, "O₂ Storage", "#1f77b4", 0)
-    
-    # H$_2$ tank
-    if V_h2 is not None and V_h2 > 0:
-        side_h2 = max(np.sqrt(V_h2) * scale, min_side)
-        h2_x = side_bio - side_h2 - 0.02
-        _add_storage_tank(ax, h2_x, 0.02, side_h2, V_h2, "H₂ Storage", "orange", 1)
-
-    ax.set_aspect("equal")
-    ax.axis("off")
-    upgrade_key_base = "__".join(upgrade_key.split("__")[:2])
-    setup_plot_style(ax, title=f"\n{upgrade_key_labels[upgrade_key_base]}", fontsize=20)
-    
-    return fig, ax
-
-
-def plot_storage_vs_bioreactor_volume(results, run_name, output_dir, tariff_key="0.0__svcw"):
-    """Plot storage volumes compared to bioreactor volume."""
-    V_bioreactor = Q * HRT_DAYS
-    grouped = _extract_storage_volumes(results, tariff_key)
 
     for base_wwtp_key, upgrade_dict in grouped.items():
         for upgrade_key, storage_data in upgrade_dict.items():
@@ -759,8 +634,81 @@ def plot_storage_vs_bioreactor_volume(results, run_name, output_dir, tariff_key=
                 continue
             
             V_o2, V_h2 = storage_data[0]
-            fig, ax = _create_storage_plot(V_bioreactor, V_o2, V_h2, base_wwtp_key, upgrade_key)
+            max_vol = max([V_bioreactor] + [V_o2 if V_o2 is not None else 0] + [V_h2 if V_h2 is not None else 0])
+            scale = 1.0 / np.sqrt(max_vol)
+            min_side = 0.02
+            fig, ax = plt.subplots(figsize=(8, 6))
+            
+            # Bioreactor
+            side_bio = np.sqrt(V_bioreactor) * scale
+            rect_bio = plt.Rectangle((0, 0), side_bio, side_bio, facecolor="#e0e0e0", zorder=0)
+            ax.add_patch(rect_bio)
+            ax.text(side_bio/2, side_bio/2, f"Bioreactor\n{V_bioreactor:,.0f} m³",
+                    ha="center", va="center", fontsize=20, weight="bold", color="black", zorder=5)
+
+            # O2 tank
+            if V_o2 is not None:
+                side_o2 = max(np.sqrt(V_o2) * scale, min_side)
+                _add_storage_tank(ax, 0.02, 0.02, side_o2, V_o2, "O₂ Storage", "#1f77b4", 0)
+            
+            # H$_2$ tank
+            if V_h2 is not None and V_h2 > 0:
+                side_h2 = max(np.sqrt(V_h2) * scale, min_side)
+                h2_x = side_bio - side_h2 - 0.02
+                _add_storage_tank(ax, h2_x, 0.02, side_h2, V_h2, "H₂ Storage", "orange", 1)
+
+            ax.set_aspect("equal")
+            ax.axis("off")
+            upgrade_key_base = "__".join(upgrade_key.split("__")[:2])
+            setup_plot_style(ax, title=f"\n{upgrade_key_labels[upgrade_key_base]}", fontsize=20)
             plt.savefig(os.path.join(output_dir, f"storage_vs_bioreactor_area_{base_wwtp_key}_{upgrade_key}.png"))
+
+
+def _figure_2_a_c(ax, day_data, data_config, with_recovery, upgrade_key, ylim=None, yticks=None):
+    """Plot power profile with only the difference between baseline and optimized power filled."""
+    time = [i / timestep_factor for i in range(1, int(24 * timestep_factor) + 1)]
+    
+    # Plot baseline and optimized lines first
+    sns.lineplot(x=time, y=day_data["Edot_t_baseline"]/1000, color="grey", 
+                linewidth=2, linestyle="--", ax=ax, label="Baseline")
+    if with_recovery:
+        sns.lineplot(x=time, y=day_data["Edot_t"]/1000, color="k", 
+                    linewidth=2, linestyle="-", ax=ax, label="Optimized")
+    
+    # Calculate the difference between optimized and baseline
+    baseline_power = day_data["Edot_t_baseline"]/1000
+    optimized_power = day_data["Edot_t"]/1000 if with_recovery else baseline_power
+    
+    # Find where optimized power is different from baseline
+    power_diff = optimized_power - baseline_power
+    
+    # Get upgrade type for color mapping
+    upgrade_type = upgrade_key.split("__")[0] + "__" + upgrade_key.split("__")[1]
+    upgrade_label = upgrade_key_labels[upgrade_type]
+    positive_mask = power_diff > 0
+    negative_mask = power_diff < 0
+    
+    ax.fill_between(time, baseline_power, optimized_power, 
+                    where=positive_mask, color=cb_palette[8], alpha=0.8, 
+                    label="Power Increase")
+    
+    ax.fill_between(time, optimized_power, baseline_power, 
+                where=negative_mask, color=cb_palette[2], alpha=0.8, 
+                label="Power Decrease")
+    
+    setup_plot_style(ax, ylabel="Power (MW)", fontsize=20)
+    ax.set_xticks([])
+    ax.set_xlim([0, 24])
+    
+    # Set y-axis limits if provided
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    if yticks is not None:
+        ax.set_yticks(yticks)
+    
+    ax.tick_params(axis='y', labelsize=14)
+    ax.yaxis.set_label_coords(-0.1, 0.5)
+    ax.legend().set_visible(False)
 
 
 def _figure_2_capex_scatter(hours_list, comp_ratio_list, capex_list, base_name, output_dir):
@@ -792,84 +740,39 @@ def _figure_2_capex_scatter(hours_list, comp_ratio_list, capex_list, base_name, 
     plt.close()  # Close the figure to prevent interference with other plots
 
 
-def figure_4(multipliers, hours_range, results, infeas, config):
-    """Plot smooth summer multiplier heatmap using the same approach as other heatmaps."""
+def _figure_2_power_config(upgrade_key, base_wwtp_key, with_storage, with_recovery):
+    """Get power data configuration with upgrade-specific colors for storage components."""
+    gas = base_wwtp_key.split("__")[0]
+    blower_label = "From Blower" if gas == "air" else "From HPO Plant"
     
-    # Prepare data for interpolation
-    hours_list = []
-    multipliers_list = []
-    lcots_list = []
+    upgrade_type = upgrade_key.split("__")[0] + "__" + upgrade_key.split("__")[1]
     
-    # Convert from grid format to point format for interpolation
-    for i, multiplier in enumerate(multipliers):
-        for j, hours in enumerate(hours_range):
-            if not infeas[i, j] and np.isfinite(results[i, j]):
-                hours_list.append(hours)
-                multipliers_list.append(multiplier)
-                lcots_list.append(results[i, j])
+    if "battery" in upgrade_key:
+        return [
+            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
+            ("Edot_b", 1, cb_palette[0], blower_label),
+            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
+            ("Edot_r", -1, cb_palette[8], "From Storage"),  # Discharging: upgrade color
+        ]
     
-    # Create figure with three side-by-side subplots
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
-    
-    # Define technology-specific data patterns
-    technologies = [
-        {"title": "Air", "data": results},
-        {"title": "HPO from PSA", "data": results},
-        {"title": "HPO from Cryo", "data": results}
-    ]
-    
-    axes = [ax1, ax2, ax3]
-    ims = []
-    
-    for idx, (ax, tech) in enumerate(zip(axes, technologies)):
-        tech_results = tech["data"].copy()
-        tech_infeas = infeas.copy()
-            
-        # Prepare data for this technology
-        tech_hours_list = []
-        tech_multipliers_list = []
-        tech_lcots_list = []
-        
-        for i, multiplier in enumerate(multipliers):
-            for j, hours in enumerate(hours_range):
-                if not tech_infeas[i, j] and np.isfinite(tech_results[i, j]):
-                    tech_hours_list.append(hours)
-                    tech_multipliers_list.append(multiplier)
-                    tech_lcots_list.append(tech_results[i, j])
-        
-        # Plot heatmap for this technology
-        im, scatter = _plot_lcot_heatmap_on_ax(
-            ax, tech_hours_list, tech_multipliers_list, tech_lcots_list, 
-            title=tech["title"],
-            add_colorbar=False  # Don't add individual colorbars
-        )
-        
-        if im is not None:
-            ims.append(im)
-        
-        ax.set_xlabel("Hours of O₂ Storage", fontsize=18)
-        y_labels = [f"{(tick-1)*100:.0f}%" for tick in ax.get_yticks()]
-        ax.set_yticklabels(y_labels, fontsize=16)
-        ax.set_ylabel("Increase in O₂ Required", fontsize=18)
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.set_xlim(0, 24)
-        ax.set_title(ax.get_title(), fontsize=20)
-        ax.text(-0.2, 1.05, chr(65 + idx) + ")", transform=ax.transAxes, fontsize=24, 
-                va='bottom', ha='left', weight='bold')  # A, B, C
-    
-    # Colorbar
-    if ims:
-        cbar = plt.colorbar(ims[0], ax=axes, shrink=0.8, aspect=20, location='right', pad=0.5)
-        cbar.set_label("Change in LCOT ($/m³)", fontsize=16)
-        cbar.ax.tick_params(labelsize=14)
-    
-    # Save the plot
-    output_dir = get_output_dir(config["run_name"], "paper_figures")
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "summer_multiplier_heatmap.png"))
-    plt.close()
+    if with_recovery and with_storage:
+        return [
+            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
+            ("Edot_b", 1, cb_palette[0], blower_label),
+            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
+            ("Edot_r_tot", -1, cb_palette[8], "From Storage"),  # Discharging: upgrade color
+        ]
+    elif with_storage:
+        return [
+            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
+            ("Edot_b", 1, cb_palette[0], blower_label),
+            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
+        ]
+    else:
+        return [("Edot_rem", 1, cb_palette[6], "Rest of Facility")]
 
-def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, location_lookup=None, results=None):
+
+def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, location_lookup=None, results=None):
     """
     Create a combined figure with technology profiles and NPV vs CAPEX plots for PSA with three upgrade keys.
     
@@ -890,7 +793,6 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
     
     # Get the first tariff key from the results
     tariff_key = list(results.keys())[0].split("___")[2] if results else "0.0__ebmud"
-    
     first_config_key = "o2__psa__1.0__0"
     base_wwtp_key = first_config_key.split("___")[0]
     
@@ -921,20 +823,31 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
         base_upgrade_key = upgrade_key.split("__")[0] + "__" + upgrade_key.split("__")[1]
         upgrade_label = upgrade_label_mappings.get(base_upgrade_key, base_upgrade_key)
         
-        # Handle battery suffix differently
-        current_suffix = suffix
-        
         # Load the configuration data
         config_key = get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix)
-        config_file = os.path.join(data_dir, run_name, f"{config_key}.pkl")
-            
-        with open(config_file, "rb") as f:
+        with open(os.path.join(data_dir, run_name, f"{config_key}.pkl"), "rb") as f:
             config_data = pickle.load(f)
-                
         all_results, best_design_key = get_design_data(config_data)     
         design_data = all_results[best_design_key]
         
-        day_data = _prepare_day_data(design_data["daily_results"], day)
+        # Get day data
+        available_keys = list(design_data["daily_results"].keys())
+        if not available_keys:
+            raise ValueError("No profile data available")
+        if day is None:
+            day_key = available_keys[0]
+            print(f"No specific date requested, using first available: {day_key}")
+        else:
+            day_key = next((key for key in available_keys if day in key), available_keys[0])
+        day_data = design_data["daily_results"][day_key].copy()
+        day_data["Ndot_b_aer_kg_hr"] = moles_to_mass(day_data["Ndot_b_aer"], M_O2)
+        day_data["Ndot_target_kg_hr"] = moles_to_mass(day_data["Ndot_target"], M_O2)
+        day_data["Edot_r_tot"] = day_data["Edot_r"] - day_data.get("Edot_r_o2", 0)
+        for key in day_data:  # Round small values to zero
+            # if isinstance(day_data[key], (list, np.ndarray)) and len(day_data[key]) > 0:
+            #     if isinstance(day_data[key][0], (int, float, np.number)):
+            day_data[key] = np.array([x if abs(x) >= 50 else 0 for x in day_data[key]])
+        
         all_power_data.extend(day_data["Edot_t_baseline"] / 1000)  # Convert to MW
         all_power_data.extend(day_data["Edot_t"] / 1000)  # Convert to MW
         
@@ -942,7 +855,7 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
         power_config = _figure_2_power_config(upgrade_key, base_wwtp_key, True, True)
         ax = axes[0, col]
         
-        _figure_1_a_c(ax, day_data, power_config, True, upgrade_key)
+        _figure_2_a_c(ax, day_data, power_config, True, upgrade_key)
         
         ax.set_title("")
         ax.set_xlim(0, 24)
@@ -959,7 +872,7 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
                 fontsize=16, transform=ax.transAxes, 
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
     
-        # Add legend for baseline/optimized lines above the top row (subplot C)
+        # Legend for baseline/optimized
         baseline_line = Line2D([0], [0], color='grey', linewidth=2, 
                                 linestyle='--', label='Baseline')
         optimized_line = Line2D([0], [0], color='k', linewidth=2, 
@@ -973,8 +886,7 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
     # MIDDLE ROW: NPV vs CAPEX plots
     for col, upgrade_key in enumerate(upgrade_keys):
         config_key = get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix)
-        config_file = os.path.join(data_dir, run_name, f"{config_key}.pkl")
-        with open(config_file, "rb") as f:
+        with open(os.path.join(data_dir, run_name, f"{config_key}.pkl"), "rb") as f:
             config_data = pickle.load(f)  
         all_results, best_design_key = get_design_data(config_data)
         design_data = all_results[best_design_key]
@@ -988,14 +900,12 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
             metrics = design_data.get("metrics", {})
             capex = metrics.get("capex", None)
             annual_savings = metrics.get("opex", {}).get("savings", {})
-            counterfactual_capex = metrics.get("npv", {}).get("from capex savings", 0)
             
             # For each lifetime (years)
             for years in range(5, 31):
                 npv = calculate_npv(
                     annual_savings,
                     capex,
-                    counterfactual_capex,
                     years=years,
                     discount_rate=0.1,
                 )
@@ -1030,23 +940,17 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
             
             # Handle edge cases for TwoSlopeNorm
             if np.isnan(vmin) or np.isnan(vmax):
-                # If we have NaN values, use default bounds
                 vmin, vmax = -15, 15
             elif vmin >= vmax:
-                # If all values are the same or in wrong order, use symmetric bounds
-                if vmin == vmax:
-                    # All values are identical, use symmetric bounds around the value
+                if vmin == vmax:  # idential values
                     abs_val = abs(vmin)
                     vmin = -max(abs_val, 1)  # Ensure at least some range
                     vmax = max(abs_val, 1)
-                else:
-                    # Values are in wrong order, swap them
+                else:  # wrong order
                     vmin, vmax = vmax, vmin
             
             # For TwoSlopeNorm, we need vmin < vcenter < vmax
-            # If all values are positive (like costs), create negative range to keep white at zero
-            if vmin > 0 and vmax > 0:
-                # All positive values (costs), create symmetric range around zero
+            if vmin > 0 and vmax > 0:  # all positive
                 range_val = max(vmax - vmin, 1)  # Ensure at least some range
                 vmin = -range_val
                 vmax = range_val
@@ -1157,84 +1061,6 @@ def figure_2(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None, locatio
     plt.savefig(save_path)
     plt.close()  # Close the figure to ensure a fresh start for the next plot
 
-
-def _figure_2_power_config(upgrade_key, base_wwtp_key, with_storage, with_recovery):
-    """Get power data configuration with upgrade-specific colors for storage components."""
-    gas = base_wwtp_key.split("__")[0]
-    blower_label = "From Blower" if gas == "air" else "From HPO Plant"
-    
-    upgrade_type = upgrade_key.split("__")[0] + "__" + upgrade_key.split("__")[1]
-    
-    if "battery" in upgrade_key:
-        return [
-            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
-            ("Edot_b", 1, cb_palette[0], blower_label),
-            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
-            ("Edot_r", -1, cb_palette[8], "From Storage"),  # Discharging: upgrade color
-        ]
-    
-    if with_recovery and with_storage:
-        return [
-            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
-            ("Edot_b", 1, cb_palette[0], blower_label),
-            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
-            ("Edot_r_tot", -1, cb_palette[8], "From Storage"),  # Discharging: upgrade color
-        ]
-    elif with_storage:
-        return [
-            ("Edot_rem", 1, cb_palette[6], "Rest of Facility"),
-            ("Edot_b", 1, cb_palette[0], blower_label),
-            ("Edot_c", 1, cb_palette[2], "To Storage"),  # Charging: cb_palette[1]
-        ]
-    else:
-        return [("Edot_rem", 1, cb_palette[6], "Rest of Facility")]
-
-
-def _figure_1_a_c(ax, day_data, data_config, with_recovery, upgrade_key, ylim=None, yticks=None):
-    """Plot power profile with only the difference between baseline and optimized power filled."""
-    time = [i / timestep_factor for i in range(1, int(24 * timestep_factor) + 1)]
-    
-    # Plot baseline and optimized lines first
-    sns.lineplot(x=time, y=day_data["Edot_t_baseline"]/1000, color="grey", 
-                linewidth=2, linestyle="--", ax=ax, label="Baseline")
-    if with_recovery:
-        sns.lineplot(x=time, y=day_data["Edot_t"]/1000, color="k", 
-                    linewidth=2, linestyle="-", ax=ax, label="Optimized")
-    
-    # Calculate the difference between optimized and baseline
-    baseline_power = day_data["Edot_t_baseline"]/1000
-    optimized_power = day_data["Edot_t"]/1000 if with_recovery else baseline_power
-    
-    # Find where optimized power is different from baseline
-    power_diff = optimized_power - baseline_power
-    
-    # Get upgrade type for color mapping
-    upgrade_type = upgrade_key.split("__")[0] + "__" + upgrade_key.split("__")[1]
-    upgrade_label = upgrade_key_labels[upgrade_type]
-    positive_mask = power_diff > 0
-    negative_mask = power_diff < 0
-    
-    ax.fill_between(time, baseline_power, optimized_power, 
-                    where=positive_mask, color=cb_palette[8], alpha=0.8, 
-                    label="Power Increase")
-    
-    ax.fill_between(time, optimized_power, baseline_power, 
-                where=negative_mask, color=cb_palette[2], alpha=0.8, 
-                label="Power Decrease")
-    
-    setup_plot_style(ax, ylabel="Power (MW)", fontsize=20)
-    ax.set_xticks([])
-    ax.set_xlim([0, 24])
-    
-    # Set y-axis limits if provided
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    if yticks is not None:
-        ax.set_yticks(yticks)
-    
-    ax.tick_params(axis='y', labelsize=14)
-    ax.yaxis.set_label_coords(-0.1, 0.5)
-    ax.legend().set_visible(False)
 
 def figure_3_function(config, results):
     """Create tornado plot from results with stacked rows for each parameter group."""
@@ -1353,12 +1179,130 @@ def figure_3_function(config, results):
     )
     plt.close()
 
+
+def figure_4_function(multipliers, hours_range, results, infeas, config):
+    """Plot 2x3 subplot with top row showing heatmaps and bottom row showing NPV comparison."""
+    
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    
+    # TOP ROW: Heatmaps for each upgrade technology
+    technologies = [
+        {"title": "Air", "data": results},
+        {"title": "HPO from PSA", "data": results},
+        {"title": "HPO from Cryo", "data": results}
+    ]
+    for idx, (ax, tech) in enumerate(zip(axes[0, :], technologies)):
+        tech_results = tech["data"].copy()
+        tech_infeas = infeas.copy()
+            
+        # Prepare data for this technology
+        tech_hours_list = []
+        tech_multipliers_list = []
+        tech_lcots_list = []
+        
+        for i, multiplier in enumerate(multipliers):
+            for j, hours in enumerate(hours_range):
+                if not tech_infeas[i, j] and np.isfinite(tech_results[i, j]):
+                    tech_hours_list.append(hours)
+                    tech_multipliers_list.append(multiplier)
+                    tech_lcots_list.append(tech_results[i, j])
+            xi, yi, zi = _plot_lcot_grid(hours, tech_multipliers_list, tech_lcots_list)
+    
+        if xi is None or yi is None or zi is None:
+            print("Warning: Could not create grid for heatmap")
+            return None, None
+
+        # Determine min, max for LCOT normalization
+        z_min = np.nanmin(zi)
+        z_max = np.nanmax(zi)
+        if not (np.isfinite(z_min) and np.isfinite(z_max)):
+            print("Warning: Cannot create heatmap - all NaN values")
+            return None, None
+        absmax = max(abs(z_min), abs(z_max))
+        norm = TwoSlopeNorm(vmin=-absmax, vcenter=0, vmax=absmax)
+
+        # Plot heatmap
+        cmap = get_custom_lcot_cmap()
+        im = ax.pcolormesh(xi, yi, zi, cmap=cmap, shading="auto", norm=norm)
+        cbar = plt.colorbar(im, ax=axes[0, :], shrink=0.8, aspect=20, location='right', pad=0.5)
+        cbar.set_label("Change in LCOT ($/m³)", fontsize=16)
+        cbar.ax.tick_params(labelsize=14)
+        scatter = ax.scatter(
+            hours, tech_multipliers_list, c=tech_lcots_list, cmap=cmap, edgecolor="black", s=50, norm=norm
+        )  # actual data points
+
+        setup_plot_style(ax, title=tech["title"], xlabel="Hours of O$_2$ Storage", ylabel="Compression Ratio")
+        ax.set_ylim(min(tech_multipliers_list), max(tech_multipliers_list))
+        ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.2f"))        
+        ax.set_xlabel("Hours of O₂ Storage", fontsize=18)
+        y_labels = [f"{(tick-1)*100:.0f}%" for tick in ax.get_yticks()]
+        ax.set_yticklabels(y_labels, fontsize=16)
+        ax.set_ylabel("Increase in O₂ Required", fontsize=18)
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        ax.set_xlim(0, 24)
+        ax.set_title(ax.get_title(), fontsize=20)
+        ax.text(-0.2, 1.05, chr(65 + idx) + ")", transform=ax.transAxes, fontsize=24, 
+                va='bottom', ha='left', weight='bold')  # A, B, C
+    
+    # BOTTOM ROW: Combined NPV comparison bar plot for 50% increase
+    bottom_ax = axes[1, :]
+    fig.delaxes(bottom_ax[1])
+    fig.delaxes(bottom_ax[2])
+    bottom_ax = bottom_ax[0]
+    
+    # Extract NPV data for each upgrade technology
+    upgrade_labels = ["Air", "HPO from PSA", "HPO from Cryo"]
+    storage_npv = []
+    counterfactual_npv = []
+    mult_results = {}
+    for config_key, config_data in config['results'].items():
+        base_wwtp_key, upgrade_key, tariff_key, suffix = parse_config_key(config_key)
+        parts = base_wwtp_key.split("__")
+        if float(parts[2]) == 1.5:  # 50% increase
+            mult_results[upgrade_key] = config_data
+    for i, upgrade_type in enumerate(["none__gas_tank", "o2__psa", "o2__cryo"]):
+        all_results, best_design_key = get_design_data(mult_results[upgrade_type])
+        design_data = all_results[best_design_key]
+        storage_npv.append(design_data["metrics"]["npv"]["total"] / 1e6)  # Convert to $M
+        counterfactual_npv.append(-design_data["metrics"]["npv"]["from capex savings"] / 1e6)  # Convert to $M
+    
+    x = np.arange(len(upgrade_labels))
+    width = 0.35
+    bars1 = bottom_ax.bar(x - width/2, storage_npv, width, label='Storage Upgrade NPV', 
+                          color='skyblue', alpha=0.8)
+    bars2 = bottom_ax.bar(x + width/2, counterfactual_npv, width, label='Counterfactual NPV', 
+                          color='lightcoral', alpha=0.8) 
+    for bar in bars1:
+        height = bar.get_height()
+        bottom_ax.text(bar.get_x() + bar.get_width()/2., height,
+                      f'{height:+.1f}M', ha='center', va='bottom' if height > 0 else 'top')
+    for bar in bars2:
+        height = bar.get_height()
+        bottom_ax.text(bar.get_x() + bar.get_width()/2., height,
+                      f'{height:+.1f}M', ha='center', va='bottom' if height > 0 else 'top')
+    
+    bottom_ax.set_xlabel('Upgrade Technology', fontsize=18)
+    bottom_ax.set_ylabel('Net Present Value (US$M)', fontsize=18)
+    bottom_ax.set_title('NPV Comparison: Storage vs Counterfactual', fontsize=20)
+    bottom_ax.set_xticks(x)
+    bottom_ax.set_xticklabels(upgrade_labels, fontsize=16)
+    bottom_ax.legend(fontsize=16)
+    bottom_ax.grid(True, alpha=0.3)
+    bottom_ax.text(-0.2, 1.05, "D)", transform=bottom_ax.transAxes, fontsize=24, 
+                    va='bottom', ha='left', weight='bold')
+    bottom_ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+    
+    # Save the plot
+    output_dir = get_output_dir(config["run_name"], "paper_figures")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "summer_multiplier_heatmap.png"))
+    plt.close()
+
+
 def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
-                   plot_psa_detail=False, plot_summer_mult=False, 
+                   figure_2=False, plot_summer_mult=False, 
                    figure_3=False, run_config=None):
-    
-    # Collect all results across all suffixes for summer multiplier analysis
-    
+        
     results = load_results_from_files(run_name)
     filtered_results = {}
     for config_key, config_data in results.items():
@@ -1382,63 +1326,47 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
         ):
             filtered_results[config_key] = config_data
     results = filtered_results
-
     output_dir = get_output_dir(run_name)
+
     get_output_dir(run_name, "mvn")
-
-    npv_data = consolidate_npv_data(results, {})
-
     plot_combined_metrics(results, run_name, output_dir, location_lookup=location_lookup)
     plot_storage_vs_bioreactor_volume(results, run_name, output_dir)
     si_cem_figure(results, run_name, output_dir)
-    if plot_psa_detail:
-        # Use a flexible date approach - let figure_2 find available dates
-        figure_2(run_name, suffix, None, npv_data=npv_data, location_lookup=location_lookup, results=results)
+
+    if figure_2:
+        figure_2_function(run_name, suffix, None, npv_data=consolidate_npv_data(results, {}),
+        location_lookup=location_lookup, results=results)
 
     if plot_summer_mult:
-        
-        # Extract multipliers and hours to use
         multipliers = [config_item["multiplier"] for config_item in run_config["summer_config_template"]]
         o2_range = run_config["design_space"]["o2_range"]
         hours_range = np.linspace(o2_range[0], o2_range[1], 50)  # Use actual config range and increase resolution
-        
         summer_results = np.full((len(multipliers), len(hours_range)), np.nan)
         infeas = np.zeros_like(summer_results, dtype=bool)
-        
-        valid_configs_count = 0
-        valid_npv_count = 0
-        total_configs_processed = 0
         
         # Process each configuration to extract delta LCOT values
         for config_key, config_data in results.items():
             base_wwtp_key, upgrade_key, tariff_key, suffix = parse_config_key(config_key)
-            
-            parts = split_key(base_wwtp_key)
-            multiplier = float(parts[2])
+            multiplier = float(split_key(base_wwtp_key)[2])
             if multiplier in multipliers:
-                total_configs_processed += 1
-                
-                # Find the best design for this configuration
-                all_results, best_design_key = get_design_data(config_data)
-                valid_configs_count += 1                                    
+                all_results, best_design_key = get_design_data(config_data)                                  
                 design_data = all_results[best_design_key]
                 hours, comp_ratio = map(float, best_design_key.split("__"))
                 
-                # Find indices
+                # Find indices with this multiplier
                 mult_idx = multipliers.index(multiplier)
-                # Find closest hours index instead of exact match
+                # Find closest hours index instead of exact match TODO: compare with and without
                 hours_idx = np.argmin(np.abs(hours_range - hours))
                 
                 # Calculate delta LCOT
                 npv = design_data["metrics"]["npv"]["total"]
                 if is_valid_npv(npv):
-                    valid_npv_count += 1
                     delta_lcot = npv_to_delta_lcot(npv)
                     summer_results[mult_idx, hours_idx] = delta_lcot
                 else:
-                    infeas[mult_idx, hours_idx] = True
+                    infeas[mult_idx, hours_idx] = True  # plot infeasible areas in black
         
-        figure_4(multipliers, hours_range, summer_results, infeas, {"run_name": run_name})
+        figure_4_function(multipliers, hours_range, summer_results, infeas, {"run_name": run_name, "results": results})
     
     # Generate tornado plot if requested
     if figure_3:
@@ -1461,33 +1389,33 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
             all_results = config_data["all_results"]
             if design_key in all_results:
                 npv = all_results[design_key]["metrics"]["npv"]["total"]
-                if is_valid_npv(npv):
-                    # Check if this is a tariff variation or summer config variation
-                    if tariff_key in tariff_keys_to_run:
-                        # Check if this is actually a summer config variation by looking at base_wwtp_key
-                        parts = base_wwtp_key.split("__")
-                        if len(parts) >= 3 and parts[2] != "1.0":  # Has non-baseline summer config info
-                            # This is a summer config variation
-                            multiplier = float(parts[2])
-                            smoothing = int(parts[3]) if len(parts) > 3 else 0
-                            summer_key = get_summer_key(multiplier, smoothing)
-                            summer_results[summer_key] = npv
-                        elif len(parts) >= 4 and parts[3] != "0":  # Has non-baseline smoothing
-                            # This is a smoothing variation (baseline multiplier but different smoothing)
-                            multiplier = float(parts[2])
-                            smoothing = int(parts[3])
-                            summer_key = get_summer_key(multiplier, smoothing)
-                            summer_results[summer_key] = npv
-                        else:
-                            # This is a tariff variation (baseline summer config with different tariff)
-                            tornado_results[tariff_key] = npv
-                    else:
-                        # This is a summer config variation (not in tariff_keys_to_run)
-                        parts = base_wwtp_key.split("__")
+                # if is_valid_npv(npv):
+                # Check if this is a tariff variation or summer config variation
+                if tariff_key in tariff_keys_to_run:
+                    # Check if this is actually a summer config variation by looking at base_wwtp_key
+                    parts = base_wwtp_key.split("__")
+                    if len(parts) >= 3 and parts[2] != "1.0":  # Has non-baseline summer config info
+                        # This is a summer config variation
                         multiplier = float(parts[2])
                         smoothing = int(parts[3]) if len(parts) > 3 else 0
                         summer_key = get_summer_key(multiplier, smoothing)
                         summer_results[summer_key] = npv
+                    elif len(parts) >= 4 and parts[3] != "0":  # Has non-baseline smoothing
+                        # This is a smoothing variation (baseline multiplier but different smoothing)
+                        multiplier = float(parts[2])
+                        smoothing = int(parts[3])
+                        summer_key = get_summer_key(multiplier, smoothing)
+                        summer_results[summer_key] = npv
+                    else:
+                        # This is a tariff variation (baseline summer config with different tariff)
+                        tornado_results[tariff_key] = npv
+                else:
+                    # This is a summer config variation (not in tariff_keys_to_run)
+                    parts = base_wwtp_key.split("__")
+                    multiplier = float(parts[2])
+                    smoothing = int(parts[3]) if len(parts) > 3 else 0
+                    summer_key = get_summer_key(multiplier, smoothing)
+                    summer_results[summer_key] = npv
 
         all_tornado_results = {}
         all_labels = {}

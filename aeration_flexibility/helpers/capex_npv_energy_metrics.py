@@ -311,42 +311,7 @@ def compressor_cost(power: float) -> float:
     return convert_to_2025_dollars(1880 * power_hp**0.671, 2023)  # TODO: check year
 
 
-def calculate_additional_costs(
-    base_cost: float, storage_type: str, o2_supply_tech: str
-) -> tuple:
-    """Calculate additional equipment, construction and engineering costs.
-
-    Args:
-        base_cost: Base cost of primary equipment
-        storage_type: Type of storage ('battery', 'gas_tank', etc.)
-        o2_supply_tech: Oxygen supply technology ('psa', 'cryo', etc.)
-
-    Returns:
-        Tuple of (equipment_cost, engineering_management_cost, construction_cost)
-    """
-    equipment_cost = base_cost
-
-    if storage_type == "battery":
-        construction_cost = 0.1 * equipment_cost
-        engineering_management_cost = construction_cost * 0.2
-    elif o2_supply_tech == "elec":
-        construction_cost = 0
-        engineering_management_cost = 0
-    else:
-        construction_cost = 10000 + equipment_cost
-        engineering_management_cost = construction_cost * 0.2
-
-    return equipment_cost, engineering_management_cost, construction_cost
-
-
-def calculate_capex(
-    sub_dict: dict,
-    storage_type: str,
-    new_o2_supply_tech: str,
-    base_wwtp_key: float,
-    summer_multiplier: float,
-    limits: dict,
-) -> tuple:
+def calculate_capex(sub_dict: dict, storage_type: str, new_o2_supply_tech: str, base_wwtp_key: float, limits: dict):
     """Calculate capital expenditure for a given configuration.
 
     Args:
@@ -354,20 +319,15 @@ def calculate_capex(
         storage_type: Type of storage ('battery', 'gas_tank', etc.)
         new_o2_supply_tech: Oxygen supply technology ('psa', 'cryo', etc.)
         base_wwtp_key: Base WWTP configuration key
-        summer_multiplier: Summer oxygen requirement multiplier
         limits: System limits dictionary
 
     Returns:
         Tuple of (total capex, tank metrics, capex components, counterfactual capex)
     """
-    # Initialize costs
-    storage_cost = 0
-    h2_storage_cost = 0
-    o2_tech_cost = 0
-    solar_cost = 0
-    tank_metrics = {}
 
-    # Calculate storage cost based on type
+    # Storage cost and tank metrics if applicable
+    storage_cost = 0
+    tank_metrics = {}
     if storage_type == "gas_tank":
         V_tank = sub_dict["param_vals"]["V_tank"]
         P_max = sub_dict["param_vals"]["P_max"] - P_ATM
@@ -380,12 +340,14 @@ def calculate_capex(
         max_Edot_c = sub_dict["param_vals"]["max_Edot_c"] + 1e-4
         storage_cost = battery_system_cost(E_max, max_Edot_c)
 
-    # Calculate hydrogen storage cost if electrolyzer with tank storage
+    # Hydrogen storage cost
+    h2_storage_cost = 0
     if "elec" in new_o2_supply_tech and "tank" in storage_type:
         N_max_h2 = sub_dict["param_vals"]["N_max"] * 2
         h2_storage_cost = get_h2_tank_cost(moles_to_mass(N_max_h2, M_H2))
 
-    # Calculate O2 technology cost
+    # O2 technology cost
+    o2_tech_cost = 0
     if new_o2_supply_tech == "psa":
         o2_tech_cost = psa_unit_cost(sub_dict["max_values"]["Ndot_c"])
     elif new_o2_supply_tech == "cryo":
@@ -395,38 +357,36 @@ def calculate_capex(
     elif new_o2_supply_tech == "compressor":
         o2_tech_cost = compressor_cost(sub_dict["max_values"]["Edot_c"])
 
-    # Calculate solar cost if solar multiplier is enabled and billing key indicates solar
-    solar_enabled = (
-        sub_dict["param_vals"]["solar_multiplier"] == 1
-        and sub_dict["billing_key"].startswith("1.0")
-    )
-    if solar_enabled:
+     # Solar cost
+    solar_cost = 0
+    if sub_dict["billing_key"].startswith("1.0"):  # solar enabled
         solar_cost = solar_unit_cost(sub_dict["max_values"]["Edot_c"])
 
-    # Calculate total capex with additional costs
+    # Total capex, adding additional costs
     base_equipment_cost = storage_cost + o2_tech_cost + h2_storage_cost + solar_cost
-    
     if any(np.isnan(x) for x in [storage_cost, h2_storage_cost, o2_tech_cost, solar_cost]):
-        total_capex = np.nan
-        engineering_cost = np.nan
-        construction_cost = np.nan
+        total_capex, engineering_cost, construction_cost = np.nan, np.nan, np.nan
     else:
-        equipment_cost, engineering_cost, construction_cost = calculate_additional_costs(
-            base_equipment_cost, storage_type, new_o2_supply_tech
-        )
-        total_capex = equipment_cost + engineering_cost + construction_cost
+        if storage_type == "battery":  # smaller additional costs
+            construction_cost = 0.1 * base_equipment_cost
+            engineering_management_cost = construction_cost * 0.2
+        elif new_o2_supply_tech == "elec":  # other costs included in capex function
+            construction_cost = 0
+            engineering_management_cost = 0
+        else:
+            construction_cost = 10000 + base_equipment_cost
+            engineering_management_cost = construction_cost * 0.2
+        total_capex = base_equipment_cost + engineering_management_cost + construction_cost
 
-    # Calculate counterfactual capex (cost of additional O2 capacity without storage)
+    # Counterfactual capex (cost of additional O2 capacity without storage)
     counterfactual_capex = 0
     o2_supply_tech = base_wwtp_key.split("__")[0]
     additional_o2_capacity = limits["Ndot_target_max"] - limits["Ndot_b_max"]
-    
     if o2_supply_tech == "psa":
         counterfactual_capex = psa_unit_cost(additional_o2_capacity)
     elif o2_supply_tech == "cryo":
         counterfactual_capex = cryo_unit_cost(additional_o2_capacity)
 
-    # Compile capex components
     capex_components = {
         "h2_storage_cost": h2_storage_cost,
         "storage_cost": storage_cost,

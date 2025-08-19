@@ -21,28 +21,30 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
                date_range, run_name="run_20250707_o2", scale_factor=None):
     """Clean EBMUD OR SVCW data using flows_prep modules"""
     
-    oxygen_storage_dir = Path(__file__).parent.parent
-    json_file_path = oxygen_storage_dir / "data" / "facility" / ingest_gas / network_filename
-    parameters_path = oxygen_storage_dir / "data" / "facility" / ingest_gas / parameter_filename
-    output_dir = f"oxygen_storage/output_data/{run_name}"
+    aeration_flexibility_dir = Path(__file__).parent.parent
+    json_file_path = aeration_flexibility_dir / "data" / "facility" / ingest_gas / network_filename
+    parameters_path = aeration_flexibility_dir / "data" / "facility" / ingest_gas / parameter_filename
+    output_dir = f"aeration_flexibility/output_data/{run_name}"
     os.makedirs(output_dir, exist_ok=True)
     
     source_paths = []
     for i in range (len(source_filenames)):
-        source_paths.append(str(oxygen_storage_dir / "data" / "facility" / ingest_gas / source_filenames[i]))
+        source_paths.append(str(aeration_flexibility_dir / "data" / "facility" / ingest_gas / source_filenames[i]))
 
     if not json_file_path.exists():
         raise FileNotFoundError(f"Network file not found at {json_file_path}")
     
     # Load the network from JSON
-    print(f"loading {json_file_path}")
+    print(f"parsing {json_file_path}")
     parser = JSONParser(str(json_file_path))
+    print(f"parsed")
     network = parser.initialize_network(verbose=False)
-    
+    print("initialized")
+
     # Create or update parameters file
     if not os.path.exists(parameters_path):
         parameters = skel.create_params_skeleton(network)
-        
+        print("created skeleton")
         # Update the general info for the facility
         if facility_id in parameters:
             parameters[facility_id]["GENERAL_INFO"].update({
@@ -66,10 +68,10 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
         # Load existing parameters and update them
         with open(parameters_path, 'r') as f:
             parameters = json.load(f)
-        
+        print("loaded skeleton")
         # Update parameters to reflect current network
         parameters = skel.update_parameters(parameters, network, remove_deleted_tags=True)
-        
+        print("updated skeleton")
         # Update the general info for the facility to ensure source paths are correct
         if facility_id in parameters:
             parameters[facility_id]["GENERAL_INFO"].update({
@@ -91,32 +93,32 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
         # Save updated parameters file
         with open(parameters_path, 'w') as f:
             json.dump(parameters, f, indent=3)
+        print("saved updated skeleton")
     
     # Handle source_path as a list, not a string
     general_info = parameters[facility_id]["GENERAL_INFO"]
     if isinstance(general_info["source_path"], str):
         general_info["source_path"] = [general_info["source_path"]]
-    
+    print("creating prepper")
     prepper = prep_data.DataPrepper(
         parameters[facility_id], 
         network,
         resolution="15m",
         verbose=False
     )
-    
-
-    # print("\nVariables in tag_to_var_map:")
-    # print(list(tag_to_var_map.keys()))
 
     # Stage 1: Preprocess raw data
-    processed_data = prepper.prep_raw_data(verbose=False)
+    print("prepping data")
+    processed_data = prepper.prep_raw_data(verbose=True)
     
+    print("converting to numeric")
     # Convert all columns to numeric, coercing errors to NaN (except DateTime)
     for col in processed_data.columns:
         if col != 'DateTime':  # Skip DateTime column to preserve datetime functionality
             processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
     
     # Stage 2: Clean processed data
+    print("cleaning data")
     cleaned_data = prepper.prep_clean_data(processed_data)
 
     # Save intermediate data files
@@ -187,7 +189,7 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
                      imputed_for_plotting, 
                      final_for_plotting, 
                      scaled_for_plotting,
-                     run_name, ingest_gas)
+                     run_name, ingest_gas, scale_factor)
 
     return scaled_data, final_data
 
@@ -238,16 +240,24 @@ def get_export_profiles_standardized(data, ingest_gas):
 
 
 def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data, 
-                     scaled_data, run_name, ingest_gas):
+                     scaled_data, run_name, ingest_gas, scale_factor):
     """Generate plots for each data processing stage and save them separately"""
     
     # Months to plot - use specific month-year combinations
-    months_to_plot = [
-        (1, 2023),
-        (4, 2023),
-        (7, 2022),
-        (10, 2022)
-    ]
+    if ingest_gas == 'air':
+        months_to_plot = [
+            (1, 2023),
+            (4, 2023),
+            (7, 2022),
+            (10, 2022)
+        ]
+    else:
+        months_to_plot = [
+            (1, 2024),
+            (4, 2024),
+            (7, 2024),
+            (10, 2024)
+        ]        
     month_names = {1: "January", 4: "April", 7: "July", 10: "October"}
     
     # print(final_data.columns)
@@ -378,7 +388,12 @@ def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data,
             if all_mean_values:
                 y_min = min(all_mean_values)
                 y_max = max(all_mean_values)
-                axs[i].set_ylim(-1000, 2000)  #TODO: change back to 5000
+                if ingest_gas == 'air' and scale_factor == 1.0:
+                    axs[i].set_ylim(0000, 2000)  # for 13.5 MGD
+                elif ingest_gas == 'ο2' and scale_factor == 1.0:
+                    axs[i].set_ylim(-4000, 8000)  # for 80 MGD
+                else:
+                    axs[i].set_ylim(-1000, 5000)  # for 40 MGD
             
             # Set subplot properties
             axs[i].set_title(f"{month_names[month]} {year}", fontsize=20)
@@ -401,7 +416,7 @@ def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data,
     
     # Adjust layout to prevent cropping of x-axis labels and legend
     plt.subplots_adjust(top=0.7, bottom=0.2, wspace=0.4)  # Increase top margin for legend and add space between subplots
-    outdir = f"oxygen_storage/output_plots/{run_name}/paper_figures"
+    outdir = f"aeration_flexibility/output_plots/{run_name}/paper_figures"
     os.makedirs(outdir, exist_ok=True)
     plt.savefig(f"{outdir}/{run_name}_{stage_name}_daily_profiles.png", dpi=200)
     plt.close()
@@ -428,7 +443,7 @@ def ingest_data(run_name="run_name", ingest_gas='air', scale_factor=None, shorte
     """Ingest and process data for oxygen storage analysis"""
     
     # Create output directory and clean data
-    os.makedirs(f"oxygen_storage/output_data/{run_name}", exist_ok=True)
+    os.makedirs(f"aeration_flexibility/output_data/{run_name}", exist_ok=True)
     config = gas_configs[ingest_gas]
     scaled_data, final_data = clean_data_with_flows_prep(
         ingest_gas, config['network_file'], config['params_file'], config['facility_id'],
@@ -494,5 +509,5 @@ def ingest_data(run_name="run_name", ingest_gas='air', scale_factor=None, shorte
         }
     
     # Save day profiles
-    with open(f"oxygen_storage/output_data/{run_name}/day_profiles.pkl", "wb") as f:
+    with open(f"aeration_flexibility/output_data/{run_name}/day_profiles.pkl", "wb") as f:
         pickle.dump(day_profiles, f)

@@ -13,7 +13,7 @@
          ],
          "exclude_dts": [],
          "source_path": [
-            "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+            "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
          ],
          "cogen_efficiency_range": [],
          "consec_nan_limit": 0
@@ -27,7 +27,7 @@
          "Cogenerator_1_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "ADDED_NET_PGS1_ENG_PWR",
                "to_numeric": true,
@@ -79,7 +79,7 @@
          "Cogenerator_2_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "ADDED_NET_PGS2_TURB_PWR",
                "to_numeric": true,
@@ -131,7 +131,7 @@
          "Cogenerator_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "Cogenerator_VirtualDemand_Electricity_Flow",
                "to_numeric": true,
@@ -183,7 +183,7 @@
          "Compressor_VirtualDemand_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "Compressor_VirtualDemand_Electricity_Flow",
                "to_numeric": true,
@@ -232,7 +232,7 @@
          "LiftPump_PrimaryClarifier_UntreatedSewage_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "AFY600A",
                "to_numeric": true,
@@ -281,7 +281,7 @@
          "O2HoldingTank_1_Air_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W44LI616_1",
                "to_numeric": true,
@@ -330,7 +330,7 @@
          "O2HoldingTank_2_Air_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W44LI626_1",
                "to_numeric": true,
@@ -379,7 +379,7 @@
          "O2HoldingTank_3_Air_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W44LI616_2",
                "to_numeric": true,
@@ -428,7 +428,7 @@
          "O2HoldingTank_4_Air_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W44LI626_2",
                "to_numeric": true,
@@ -477,7 +477,7 @@
          "O2HoldingTank_Air_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O2HoldingTank_Air_Level",
                "to_numeric": true,
@@ -526,7 +526,7 @@
          "O2PlantCompressor_1_Electricity_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O106AKW",
                "to_numeric": true,
@@ -575,7 +575,7 @@
          "O2PlantCompressor_2_Electricity_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O206AKW",
                "to_numeric": true,
@@ -624,7 +624,7 @@
          "O2PlantCompressor_Electricity_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O2PlantCompressor_Electricity_OutFlow",
                "to_numeric": true,
@@ -673,7 +673,7 @@
          "O2Plant_1_Air_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "OFR1201",
                "to_numeric": true,
@@ -722,7 +722,7 @@
          "O2Plant_2_Air_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "OFR1202",
                "to_numeric": true,
@@ -771,7 +771,7 @@
          "O2Plant_Air_OutFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O2Plant_Air_OutFlow",
                "to_numeric": true,
@@ -820,7 +820,7 @@
          "PowerGrid1_EBMUD_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W17NP1151_1F_PLC1_RD",
                "to_numeric": true,
@@ -869,7 +869,7 @@
          "PowerGrid2_EBMUD_Electricity_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "W17NP1107_1F_PLC1_RD",
                "to_numeric": true,
@@ -918,7 +918,7 @@
          "VirtualDemand_Electricity_InFlow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "VirtualDemand_Electricity_InFlow",
                "to_numeric": true,
@@ -967,7 +967,7 @@
          "VirtualDemand_RestOfFacilityPower": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "VirtualDemand_RestOfFacilityPower",
                "to_numeric": true,
@@ -1016,7 +1016,7 @@
          "LiftPump_UntreatedSewage_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "AFY600A",
                "to_numeric": true,
@@ -1065,7 +1065,7 @@
          "O2Plant_AerationBasin_Oxygen_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "HFI500GP",
                "to_numeric": true,
@@ -1114,7 +1114,7 @@
          "O2Plant_AerationBasin_Air_Flow": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O2Plant_AerationBasin_Air_Flow",
                "to_numeric": true,
@@ -1163,7 +1163,7 @@
          "NET_GENERATION": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "NET_GENERATION",
                "to_numeric": true,
@@ -1215,7 +1215,7 @@
          "O2HoldingTank_Total_Level": {
             "preprocessing": {
                "source_path": [
-                  "/home/daly/git/oxygen-storage/oxygen_storage/data/facility/o2/scada_combined_data.csv"
+                  "/home/daly/git/aeration-flexibility/aeration_flexibility/data/facility/o2/scada_combined_data.csv"
                ],
                "SCADA_tag": "O2HoldingTank_Total_Level",
                "to_numeric": true,
@@ -1374,6 +1374,22 @@
                "VirtualDemand_Electricity_InFlow",
                "Cogenerator_VirtualDemand_Electricity_Flow",
                "O2PlantCompressor_Electricity_OutFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "NET_GENERATION": {
+            "children": [
+               "Cogenerator_1_VirtualDemand_Electricity_Flow",
+               "Cogenerator_2_VirtualDemand_Electricity_Flow"
             ],
             "cleaning": {
                "clean_parent": false,
@@ -2152,6 +2168,22 @@
                "VirtualDemand_Electricity_InFlow",
                "Cogenerator_VirtualDemand_Electricity_Flow",
                "O2PlantCompressor_Electricity_OutFlow"
+            ],
+            "cleaning": {
+               "clean_parent": false,
+               "clean_children": false
+            },
+            "imputation": {
+               "impute_balance": true,
+               "enforce_balance": false,
+               "allocate_balance": [],
+               "nonnegative_balance": true
+            }
+         },
+         "NET_GENERATION": {
+            "children": [
+               "Cogenerator_1_VirtualDemand_Electricity_Flow",
+               "Cogenerator_2_VirtualDemand_Electricity_Flow"
             ],
             "cleaning": {
                "clean_parent": false,

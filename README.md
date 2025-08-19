@@ -26,7 +26,7 @@ python run_all.py configs/run_test_nr_tornado.json
 ## File Structure
 
 ```
-oxygen_storage/
+aeration_flexibility/
 ├── run_all.py                    # Main entry point for both analysis types
 ├── helpers/
 │   ├── plotting.py              # Standard plotting functions (with tornado detection)
