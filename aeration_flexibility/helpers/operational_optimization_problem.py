@@ -174,6 +174,8 @@ class O2Problem:
 
         var_length = int(96 * self.horizon_days / (timestep / 15))
 
+        N_max = Hours_of_O2 * Ndot_target_mean
+
         self.new_param_vals = {
             # Flow rate parameters
             "Ndot_b_max": Ndot_b_max,
@@ -184,7 +186,8 @@ class O2Problem:
                 else min(Ndot_target_min, (1 - compressor_turndown) * Ndot_b_max)
             ),
             "Ndot_r_max": 0 if self.is_battery else Ndot_target_max,
-            "Ndot_c_max": 0 if self.is_battery else Ndot_target_max/2,
+            "Ndot_c_max": 0 if self.is_battery else N_max/1,  # (limit / 1 hour)
+            "unmet_o2_max": Ndot_b_max / 10,
             # Energy parameters
             "Edot_t_max": limits["Edot_t_max"],
             "Edot_r_max": E_max / Hours_of_O2 if self.is_battery else 0,
@@ -196,7 +199,7 @@ class O2Problem:
             "P_init": P_init,
             "V_tank": V_tank,
             "N_min": N_min,
-            "N_max": Hours_of_O2 * Ndot_target_mean,
+            "N_max": N_max,
             "N_max_h2": Ndot_target_mean * 2,
             # Efficiency parameters
             "eta_comp": eta,
@@ -360,7 +363,7 @@ class O2Problem:
         if results.solver.termination_condition != pyo.TerminationCondition.optimal:
             print(f"Initialization not optimal: {results.solver.termination_condition}")
             print(f"Solver message: {results.solver.message}")
-            self.get_diagnostics()
+            # self.get_diagnostics()
             return False
         return True
 
@@ -513,7 +516,6 @@ class O2Problem:
                 self._add_gas_tank_timestep_constraints(t)
             elif self.is_liquid_tank:
                 self._add_liquid_tank_timestep_constraints(t)
-            # self._add_o2_demand_constraints(t)
 
         # Only add total_h2 constraint for gas tanks with electrolysis
         if self.is_gas_tank:
@@ -636,26 +638,6 @@ class O2Problem:
             ),
         )
 
-    def _add_o2_demand_constraints(self, t):
-        # unmet_o2 will be penalized in objective
-        # self.m.o2_storage_const.add_component(
-        #     f"o2_mass_balance_with_unmet_{t}",
-        #     pyo.Constraint(
-        #         expr=self.m.vp.Ndot_target[t]
-        #         == self.m.vp.Ndot_b_aer[t] + (1 - self.m.vp.l_o2) * self.m.vp.Ndot_r[t] + self.m.vp.unmet_o2[t]
-        #     ),
-        # )
-        # self.m.o2_storage_const.add_component(
-        #     f"charge_energy_{t}",
-        #     pyo.Constraint(
-        #         expr=self.m.vp.Edot_c[t]
-        #         == self.m.vp.Edot_c_gen[t]
-        #         + self.m.vp.Edot_c_comp[t]
-        #         + self.m.vp.Edot_c_comp_h2[t]
-        #     ),
-        # )
-        pass
-
     def _add_battery_constraints(self):
         # Fix initial storage state if not the first day of the month
         if self.initial_storage_state is not None and 'E' in self.initial_storage_state:
@@ -731,8 +713,6 @@ class O2Problem:
             demand_scale_factor=self.var_length/(30*96),
             decompose_exports=True
         )
-        # self.m = new_model
-        # self.itemized_costs = itemized_costs
         
         self.m.cost_const.add_component(
                 'total cost',
@@ -764,7 +744,7 @@ class O2Problem:
             obj_expr -= self.m.vp.h2_value
         
         # Penalty for unmet oxygen demand
-        unmet_penalty = sum(self.m.vp.unmet_o2[t] for t in range(self.var_length)) * 1e-2
+        unmet_penalty = sum(self.m.vp.unmet_o2[t] for t in range(self.var_length)) * 1e-1
         obj_expr += unmet_penalty
         
         # Penalty for simultaneous charge / discharge
@@ -776,29 +756,15 @@ class O2Problem:
         self.m.obj = pyo.Objective(expr=obj_expr, sense=pyo.minimize)
         return self.m
 
-    def construct_problem(
-        self,
-        charge_dict,
-        baseline_vals=None,
-        prev_demand_dict=None
-    ):
-        start_time = time.time()
-        
+    def construct_problem(self, charge_dict, baseline_vals=None, prev_demand_dict=None):        
         self.var_length = len(baseline_vals["Ndot_target"])
-        
-        self.create_vars_and_params(
-            baseline_vals, self.new_param_vals, charge_dict
-        )
+        self.create_vars_and_params(baseline_vals, self.new_param_vals, charge_dict)
         self.construct_constraints(charge_dict, prev_demand_dict)
         self.initialize_vars()
         self.construct_objective()
-        
         return self.m
 
     def get_profile(self):
-        """
-        Returns dictionary of the vp values.
-        """
         sub_profile_columns = [
             column for column in self.profile_columns if column in self.m.vp.__dict__
         ]
@@ -809,6 +775,13 @@ class O2Problem:
 
         if self.m.vp.Edot_t.extract_values() is None:
             print("Returning zeros because Edot_t.extract_values() is None")
+            return {key: np.zeros(self.var_length) for key in sub_profile_columns}
+        unmet_values = self.m.vp.unmet_o2.extract_values()
+        # print(unmet_values)
+        max_unmet = max(unmet_values.values())
+        # print(max_unmet)
+        if max_unmet > 10.0:
+            print("Returning zeros because there is significant unmet o2")
             return {key: np.zeros(self.var_length) for key in sub_profile_columns}
 
         profile_dict = {
@@ -821,9 +794,9 @@ class O2Problem:
             )
             for column in sub_profile_columns
         }
-        values = [pyo.value(self.m.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
-        print(f"min Edot_t: {min(values)}, max Edot_t: {max(values)}")
-        print(f" total cost {self.m.vp.tariff_cost.value}")
+        baseline_values = [pyo.value(self.m.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
+        values = [pyo.value(self.m.vp.Edot_t_net[t]) for t in range(self.var_length)]
+        print(f"{self.design_key} min, max Edot_t_net: {min(values)}, {max(values)}, Edot_t_baseline: {min(baseline_values)}, {max(baseline_values)}, cost {self.m.vp.tariff_cost.value}")
         return profile_dict
 
 
@@ -848,10 +821,9 @@ class O2Problem:
                 )
             else:
                 print(f"  IPOPT failed after {solve_time:.3f}s. Status: {results.solver.termination_condition}")
-                self.get_diagnostics()
+                # self.get_diagnostics()
         except Exception as e:
             print(f"  Error solving {self.m.name}: {str(e)}")
-               
             pass
 
         return {}, {}
@@ -859,7 +831,6 @@ class O2Problem:
     def print_cost_values(self, charge_dict=None, prev_demand_dict=None):
         # Check if the optimization actually solved successfully
         try:
-            # Try to access the first value to see if it's initialized
             test_value = pyo.value(self.m.vp.Edot_t_net[0])
             test_value_2 = pyo.value(self.m.vp.tariff_cost)
             if test_value is None or test_value_2 is None:
@@ -868,13 +839,7 @@ class O2Problem:
         except (ValueError, AttributeError):
             print("  Optimization did not solve - skipping cost calculation")
             return
-            
-        optimized_values = [pyo.value(self.m.vp.Edot_t_net[t]) for t in range(self.var_length)]
-        baseline_values = [pyo.value(self.m.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
-        print(f"  range of Edot_t_net min: {min(optimized_values)}, max: {max(optimized_values)}")
-        print(f"  range of Edot_t_baseline min: {min(baseline_values)}, max: {max(baseline_values)}")
 
-        # Calculate baseline costs for comparison
         baseline_consumption_data_dict = {
             "electric": np.array([pyo.value(getattr(self.m.vp, "Edot_t_baseline")[t]) for t in range(self.var_length)]),
             "gas": np.array([pyo.value(self.m.vp.total_fng[t]) for t in range(self.var_length)]),
@@ -923,5 +888,4 @@ class O2Problem:
                     if charge_type != "total":
                         print(f"    {utility}_{charge_type}: ${cost_value:,.2f}")
 
-        print('print finished')
         sys.stderr.flush()

@@ -9,7 +9,7 @@
       "Edot_c": {"bounds": [0, "Edot_c_max"], "domain": "NonNegativeReals"},
       "Edot_r": {"bounds": [0, "Edot_r_max"], "domain": "NonNegativeReals"},
       "Edot_t_net": {"bounds": [-1e8, "Edot_t_max"], "domain": "Reals"},
-      "unmet_o2": {"bounds": [0, "Ndot_b_max"], "domain": "NonNegativeReals"},
+      "unmet_o2": {"bounds": [0, "unmet_o2_max"], "domain": "NonNegativeReals"},
       "tariff_cost": {"bounds": [0, 1e10], "indexed": false, "domain": "Reals"}
     },
     "o2_storage": {
@@ -53,7 +53,8 @@
         "Ndot_b_max": {"domain": "NonNegativeReals"}, 
         "Ndot_b_min": {"domain": "NonNegativeReals"}, 
         "Ndot_c_max": {"domain": "NonNegativeReals"}, 
-        "Ndot_r_max": {"domain": "NonNegativeReals"}
+        "Ndot_r_max": {"domain": "NonNegativeReals"},
+        "unmet_o2_max": {"domain": "NonNegativeReals"}
       },
       "energy": {
         "Edot_b_comp_coeff": {"domain": "NonNegativeReals"}, 

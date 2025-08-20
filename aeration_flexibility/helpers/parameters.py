@@ -174,15 +174,6 @@ print('volume to moles STP for 1 m3')
 print(volume_to_moles_stp(1))
 
 
-def moles_to_volume_stp(moles):
-    """
-    Calculate volume of air based on ideal gas law
-    """
-    temperature = T_room
-    volume = moles * R * temperature / (P_ATM * Pa_per_MPa)
-    return volume
-
-
 def moles_to_mass(moles, M):
     """
     Calculate mass of gas based on ideal gas law
@@ -206,35 +197,14 @@ cb_palette = [
 ]
 # Summer tariffs: May 1 through October 30
 # Winter tariffs: November 1 through April 30
-summer_months = [
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-]  # Dry season: From May 1 through September 30,
-winter_months = [
-    1,
-    2,
-    3,
-    4,
-    11,
-    12,
-]  # Wet season: From October 1 through April 30,
+# Dry season NPDES: From May 1 through September 30,
+# Wet season NPDES: From October 1 through April 30,
 
 
-def is_summer(month):
-    if month in summer_months:
-        return True
-
-
-def get_month_key(year, month):
-    return f"{year}-{month:02d}"
-
-
-def get_days_in_month(year, month):
-    return (
+def get_all_days_in_month(year, month):
+    year = int(year)
+    month = int(month)
+    days_in_month = (
         31
         if month in [1, 3, 5, 7, 8, 10, 12]
         else (
@@ -247,12 +217,6 @@ def get_days_in_month(year, month):
             )
         )
     )
-
-
-def get_all_days_in_month(year, month):
-    year = int(year)
-    month = int(month)
-    days_in_month = get_days_in_month(year, month)
     return [f"{year}-{month:02d}-{day:02d}" for day in range(1, days_in_month + 1)]
 
 

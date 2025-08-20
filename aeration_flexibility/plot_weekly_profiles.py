@@ -182,11 +182,12 @@ def plot_power_comparison(df, date, design_key, ax1=None, ax2=None):
 def load_daily_data(run_name, config_name, design_key, date, month_key):
     """Load data for a specific day."""
     intermediate_file = os.path.join(
-        f"oxygen_storage/output_data/{run_name}/intermediate/{config_name}", 
+        f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}", 
         f"{design_key}_{month_key}_{date}.pkl"
     )
     
     if not os.path.exists(intermediate_file):
+        print(f"Not found: {intermediate_file}")
         return None, None, None
     
     with open(intermediate_file, 'rb') as f:
@@ -246,7 +247,6 @@ def plot_weekly_profiles(run_name, config_name, design_key, start_date, output_d
         df, daily_param_values, max_values = load_daily_data(run_name, config_name, design_key, date, month_key)
         
         if df is None:
-            print(f"  No data available for {date}")
             continue
         
         # Store param_values from first successful day
@@ -261,7 +261,6 @@ def plot_weekly_profiles(run_name, config_name, design_key, start_date, output_d
         available_dates.append(date)
     
     if not combined_data:
-        print("No data available for any of the requested dates.")
         return
     
     # Concatenate all data into one continuous time series
@@ -446,41 +445,34 @@ def main():
     run_name = "wwtp_comparison_svcw_40mgd"  # The run name from your config
     config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__svcw___1.0__0"  # Config name
     design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
-    month_key = "2022-07"  # Month key (YYYY-MM)
     date = "2022-07-05"  # Specific date (YYYY-MM-DD)
 
-    # run_name = "nr_comparison_svcw"  # The run name from your config
-    # month_key = "2022-07"  # Month key (YYYY-MM)
-    # config_name = "o2__psa__1.6__0___elec__gas_tank__0___0.0__svcw___1.6__0"  # Config name
-    # design_key = "16.03__236.7"  # Design key (Hours_of_O2__compression_ratio)
-    # date = "2022-07-15"  # Specific date (YYYY-MM-DD)
-
-    run_name = "wwtp_comparison_ebmud_40mgd"  # The run name from your config
-    month_key = "2024-01"  # Month key (YYYY-MM)
-    config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__ebmud___1.0__0"  # Config name
+    run_name = "nr_comparison_svcw"  # The run name from your config
+    config_name = "o2__psa__1.6__0___none__gas_tank__0___0.0__svcw___1.6__0"  # Config name
     design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
-    date = "2024-01-03"  # Specific date (YYYY-MM-DD)
+    date = "2022-07-01"  # Specific date (YYYY-MM-DD)
+
+    # run_name = "wwtp_comparison_ebmud_40mgd"  # The run name from your config
+    # config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__ebmud___1.0__0"  # Config name
+    # design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
+    # date = "2024-01-03"  # Specific date (YYYY-MM-DD)
 
     # run_name = "tornado_svcw_psa"  # The run name from your config
-    # month_key = "2022-07"  # Month key (YYYY-MM)
     # config_name = "o2__psa__1.1__0___none__gas_tank__0___0.0__svcw_d1.0_e1.0_w0___1.1__0"  # Config name
     # design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
     # date = "2022-07-02"  # Specific date (YYYY-MM-DD)
 
-    run_name = "speed_test"  # The run name from your config
-    month_key = "2022-07"  # Month key (YYYY-MM)
-    config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__svcw___1.0__0"  # Config name
-    design_key = "3.0__700.0"  # Design key (Hours_of_O2__compression_ratio)
-    date = "2022-07-01"  # Specific date (YYYY-MM-DD)
+    # run_name = "speed_test"  # The run name from your config
+    # config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__svcw___1.0__0"  # Config name
+    # design_key = "3.0__700.0"  # Design key (Hours_of_O2__compression_ratio)
+    # date = "2022-07-01"  # Specific date (YYYY-MM-DD)
 
     # run_name = "speed_test_o2"  # The run name from your config
-    # month_key = "2024-01"  # Month key (YYYY-MM)
     # config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__ebmud___1.0__0"  # Config name
     # design_key = "3.0__700.0"  # Design key (Hours_of_O2__compression_ratio)
     # date = "2024-01-01"  # Specific date (YYYY-MM-DD)
 
     # run_name = "speed_test_o2"  # The run name from your config
-    # month_key = "2024-01"  # Month key (YYYY-MM)
     # config_name = "o2__cryo__1.0__0___none__liquid_tank__0___0.0__ebmud___1.0__0"  # Config name
     # design_key = "3.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
     # date = "2024-01-03"  # Specific date (YYYY-MM-DD)

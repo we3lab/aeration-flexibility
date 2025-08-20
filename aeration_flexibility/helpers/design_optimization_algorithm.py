@@ -1,4 +1,3 @@
-# from ast import iter_child_nodes
 import numpy as np
 import pickle
 import pandas as pd
@@ -40,11 +39,11 @@ def concatenate_n_days_data(baseline_val_dict, charge_dict_month, days, start_da
     concatenated_baseline_vals = {}
     for key in baseline_val_dict[group_days[0]].keys():
         if isinstance(baseline_val_dict[group_days[0]][key], np.ndarray):
-            # For indexed parameters, concatenate arrays
+            # For indexed parameters, concatenate arrays and convert to pandas Series
             concatenated_vals = []
             for day in group_days:
                 concatenated_vals.append(baseline_val_dict[day][key])
-            concatenated_baseline_vals[key] = np.concatenate(concatenated_vals)
+            concatenated_baseline_vals[key] = pd.Series(np.concatenate(concatenated_vals))
         else:
             # For non-indexed parameters, use the first day's value
             concatenated_baseline_vals[key] = baseline_val_dict[group_days[0]][key]
@@ -54,7 +53,7 @@ def concatenate_n_days_data(baseline_val_dict, charge_dict_month, days, start_da
     for charge_key in charge_dict_month.keys():
         concatenated_vals = []
         for day in group_days:
-            year, month, day_num = map(int, day.split("-"))
+            _, _, day_num = map(int, day.split("-"))
             start_idx = (day_num - 1) * 96
             end_idx = start_idx + 96
             concatenated_vals.append(charge_dict_month[charge_key][start_idx:end_idx])
@@ -68,39 +67,30 @@ def extract_day_results_from_n_day_profile(profile, day_idx, total_days_in_group
     Extract results for a specific day from an N-day optimization profile.
     
     Args:
-        profile: N-day optimization profile
+        profile: N-day optimization profile (numpy arrays for time-series data)
         day_idx: Index of the day to extract (0, 1, ..., N-1)
         total_days_in_group: Total number of days in the group
     
     Returns:
-        dict: Single-day profile
+        dict: Single-day profile with pandas Series for time-series data
     """
     if not profile:
-        return None
+        return None    
     
-    # Calculate start and end indices for the day
-    start_idx = day_idx * 96
-    end_idx = start_idx + 96
-    
-    # Extract day-specific results
     day_profile = {}
+    start_idx = day_idx * 96
     for key, value in profile.items():
-        if isinstance(value, (np.ndarray, list)) and len(value) == total_days_in_group * 96:
-            # For time-series data, extract the day's slice
-            day_profile[key] = value[start_idx:end_idx]
-        elif isinstance(value, pd.Series) and len(value) == total_days_in_group * 96:
-            # For pandas Series, extract the day's slice
-            day_profile[key] = value.iloc[start_idx:end_idx]
-        else:
-            # For non-time-series data, keep as is
+        # Check if this is time-series data
+        if hasattr(value, '__len__') and len(value) == total_days_in_group * 96:
+            day_profile[key] = pd.Series(value[start_idx:start_idx + 96])
+        else:  # non-time-series data
             day_profile[key] = value
     
     return day_profile
 
 def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits, 
-                  baseline_val_dict, charge_dict_month, get_param_vals=False, 
-                  prev_demand_dict=None, initial_storage_state=None,
-                  horizon_days=3):
+                  baseline_val_dict, charge_dict_month, prev_demand_dict=None,
+                  initial_storage_state=None, horizon_days=3):
     """
     Process N consecutive days as a single optimization problem.
     
@@ -113,7 +103,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
         limits: System limits
         baseline_val_dict: Dictionary of baseline values for each day
         charge_dict_month: Monthly charge dictionary
-        get_param_vals: Whether to only get parameter values
         prev_demand_dict: Previous demand dictionary
         initial_storage_state: Initial storage state for the first day
     
@@ -141,11 +130,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
     )
     problem.get_new_param_vals()
 
-    if get_param_vals:
-        param_vals = problem.new_param_vals
-        del problem  # clean up memory
-        return (param_vals, None, None, None)
-
     # Check if concatenated data has correct length
     if len(concatenated_baseline_vals["Ndot_target"]) != len(group_days) * 96:
         print(f"Skipping {group_days[0]} to {group_days[-1]} - Ndot_target has {len(concatenated_baseline_vals['Ndot_target'])} entries")
@@ -171,7 +155,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
     if profile and "Edot_t_net" in profile:
         profiles_dict = {}
         max_values_dict = {}
-        initial_storage_states_dict = {}
         
         for day_idx, day in enumerate(group_days):
             # Extract day-specific profile
@@ -189,16 +172,14 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
                 }
                 
                 # Store initial storage state for the second to last day of the group
-                if day_idx == len(group_days) - 2:  # Second to last day
-                    initial_storage_states_dict[day] = extract_final_storage_state(day_profile)
-                else:
-                    initial_storage_states_dict[day] = None
+                if day_idx == len(group_days) - 2 or len(group_days)<horizon_days:  # Second to last day
+                    initial_storage_state_next_run = extract_final_storage_state(day_profile)
             else:
                 profiles_dict[day] = None
                 max_values_dict[day] = {"Ndot_c": 0, "Edot_c": 0}
-                initial_storage_states_dict[day] = None
+                initial_storage_state_next_run = None
         
-        return profiles_dict, new_param_vals, max_values_dict, initial_storage_states_dict
+        return profiles_dict, new_param_vals, max_values_dict, initial_storage_state_next_run
 
     return None, None, None, None
 
@@ -220,7 +201,7 @@ def find_valid_replacement(date, valid_days):
         day (str): Full date string in format 'YYYY-MM-DD'
         valid_days (list): List of full date strings in format 'YYYY-MM-DD'
     """
-    replacement_days = get_replacement_days(date)  # Use full date string!
+    replacement_days = get_replacement_days(date)
     for replacement_day in replacement_days:
         if replacement_day in valid_days:
             return replacement_day
@@ -261,6 +242,7 @@ def load_intermediate_results(run_name, config_name):
     intermediate_dir = os.path.abspath(intermediate_dir)  # Convert to absolute path
     
     if not os.path.exists(intermediate_dir):
+        print("   No intermediate files found")
         return {}
     
     intermediate_files = {}
@@ -291,14 +273,13 @@ def load_intermediate_results(run_name, config_name):
     return intermediate_files
 
 
-def check_design_feasibility(month_results, summer_multiplier, total_days=None):
+def check_design_feasibility(month_results, summer_multiplier):
     """
     Centralized function to check if a design is feasible based on month results.
     
     Args:
-        month_results: List of (date, (profile, new_param_vals, max_values)) tuples
+        month_results: Dictionary of {day: (profile, new_param_vals, max_values)}
         summer_multiplier: Summer multiplier value
-        total_days: Total number of days in the month (optional)
     
     Returns:
         tuple: (is_feasible, failure_reason, failed_days_count)
@@ -306,19 +287,23 @@ def check_design_feasibility(month_results, summer_multiplier, total_days=None):
     if not month_results:
         return False, "no_results", 0
     
-    failed_days = sum(1 for _, (profile, _, _) in month_results if not profile or "Edot_t_net" not in profile)
-    total_days = total_days or len(month_results)
+    failed_days = sum(1 for profile, _ in month_results.values() 
+                     if not profile or "Edot_t_net" not in profile)
     
     # Check for insufficient storage
-    if float(summer_multiplier) > 1.0 and failed_days > 5:
+    if float(summer_multiplier) > 1.0 and failed_days > 5: # more than 2 horizons
         return False, "insufficient_storage", failed_days
     
     # Check for general failure (more than 50% failed)
-    if failed_days > total_days / 2:
+    if failed_days > len(month_results) / 2:
         return False, "half_failed", failed_days
     
     return True, None, failed_days
 
+def skip_saving_last_day(horizon_days, i, day_idx, days):
+    is_last_day_of_month = (i + horizon_days >= len(days))
+    is_last_day_of_horizon = (day_idx == horizon_days - 1)
+    return is_last_day_of_horizon and not is_last_day_of_month
 
 def process_design_point_and_month(design_point_data, run_name, intermediate_files=None, horizon_days=3):
     """Process a single design point and month combination using N-day optimization with 1-day overlap.
@@ -331,15 +316,15 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
         intermediate_files: Dictionary of file paths to already-solved intermediate results
         horizon_days: Number of days to process in each horizon (default 3)
     """
-    (design_key, month_key_and_days, base_wwtp_key, upgrade_key,
-     tariff_key, limits, baseline_val_dict, param_values,) = design_point_data
-    month_key, days = month_key_and_days    
+    (design_key, month_key, month_days, base_wwtp_key, upgrade_key,
+     tariff_key, limits, baseline_val_dict, param_values) = design_point_data    
 
     # Process the month using N-day optimization with 1-day overlap
     month_start_time = time.time()
-    month_results = []
     year, month = month_key.split("-")
     
+    print(f"processing {design_key} in month {month}, {year}")
+
     # Initialize prev_demand_dict with zero demands for all charge types
     prev_demand_dict = {}
     demand_charge_info_dict = get_demand_charge_info_dict(
@@ -360,10 +345,6 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
     os.makedirs(intermediate_dir, exist_ok=True)    
     
-    # Track failures for early exit
-    day_failures = 0
-    total_days = len(days)
-
     # Load tariff data for the month
     tariff_data = get_tariff_data()
     if tariff_key not in tariff_data:
@@ -375,74 +356,60 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
 
     # Track which days have been processed and their final results
     processed_days = set()
-    final_day_results = {}  # Store the final result for each day
-    monthly_profiles = {"baseline": [], "optimized": []}
+    month_results = {}  # Store the final result for each day
     
     # Process days in overlapping groups with 1-day overlap
     i = 0
-    while i < len(days):
-        # Get the current group of days
-        group_days = days[i:i+horizon_days]
+    day_failures = 0
+    while i < len(month_days):
+        group_days = month_days[i:i+horizon_days]
         
         # Check if we have intermediate results for all days in this group
         all_intermediate_available = True
         if intermediate_files and design_key in intermediate_files and month_key in intermediate_files[design_key]:
-            for day in group_days:
-                if day not in intermediate_files[design_key][month_key]:
+            for group_day in group_days:
+                if group_day not in intermediate_files[design_key][month_key]:
                     all_intermediate_available = False
                     break
         else:
             all_intermediate_available = False
         
         if all_intermediate_available:
-            for day in group_days: # overwrite existing solved day
-                file_path = intermediate_files[design_key][month_key][day]
-                if os.path.exists(file_path):
-                    try:
-                        with open(file_path, 'rb') as f:
-                            stored_data = pickle.load(f)
-                        
-                        profile = stored_data["profile"]
-                        new_param_vals = stored_data["new_param_vals"]
-                        max_values = stored_data["max_values"]
-                        
-                        if profile and "Edot_t_net" in profile:
-                            final_day_results[day] = (profile, new_param_vals, max_values)
-                            processed_days.add(day)
-                            
-                            # Add profiles to monthly data
-                            if "Edot_t_baseline" in profile:
-                                monthly_profiles["baseline"].extend(profile["Edot_t_baseline"])
-                                monthly_profiles["optimized"].extend(profile["Edot_t_net"])
-                        else:
-                            print(f"  Loaded intermediate result for {day} but profile is invalid")
-                            final_day_results[day] = (None, new_param_vals, max_values)
-                            day_failures += 1
-                        
-                        del stored_data
-                    except Exception as e:
-                        print(f"  Error loading intermediate result for {day}: {e}")
-                        all_intermediate_available = False
-                else:
-                    all_intermediate_available = False
-        
-        if not all_intermediate_available:
+            for group_day in group_days:
+                with open(intermediate_files[design_key][month_key][group_day], 'rb') as f:
+                    group_day_data = pickle.load(f)
+                
+                profile = group_day_data["profile"]
+                new_param_vals = group_day_data["new_param_vals"]
+                max_values = group_day_data["max_values"]
+                
+                if profile and "Edot_t_net" in profile:  # solved day
+                    month_results[group_day] = (profile, max_values)
+                    processed_days.add(group_day)
+                else:  # dummy file / failed day
+                    print(f"  Loaded dummy file for failed day {group_day}: {group_day_data['failure_reason']}")
+                    month_results[group_day] = (None, max_values)
+                    day_failures += 1
+                
+                del group_day_data
+        else:
             initial_storage_state = None
             if i == 0:
-                # For first day of month, O2Problem will use minimum values
-                pass
+                if float(summer_multiplier) > 1.0: # Give half storage to help with first day feasibility
+                    initial_storage_state = {'N': param_values.get('N_max',0)/2, 'E': 0}
+                else:  # O2Problem will use minimum values
+                    pass
             elif i > 0:
                 # Use initial storage state from the last day of the previous group
-                # With 1-day overlap, the first day of current group = last day of previous group
-                prev_group_last_day = days[i-1]  # This was the last day in the previous group
-                if prev_group_last_day in final_day_results:
-                    prev_profile = final_day_results[prev_group_last_day][0]
+                prev_group_last_day = month_days[i-1]  # This was the last day in the previous group
+                if prev_group_last_day in month_results:
+                    prev_profile = month_results[prev_group_last_day][0]
                     if prev_profile:
                         # Get the initial storage state (first timestep) of the last day from previous group
                         initial_storage_state = extract_final_storage_state(prev_profile)
             
             # Process the N-day group
-            profiles_dict, new_param_vals, max_values_dict, initial_storage_states_dict = process_n_days(
+            profiles_dict, new_param_vals, max_values_dict, final_storage_state_prev_run = process_n_days(
                 group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits,
                 baseline_val_dict, charge_dict_month, prev_demand_dict=prev_demand_dict,
                 initial_storage_state=initial_storage_state, horizon_days=horizon_days
@@ -450,107 +417,90 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             
             if profiles_dict:
                 # Save results for each day not already processed
-                for day_idx, day in enumerate(group_days):
-                    if day in processed_days:
-                        continue
-                    
+                for solved_day_idx, solved_day in enumerate(group_days):
                     # Skip saving the last day of the horizon unless it's the last day of the month
-                    is_last_day_of_month = (i + horizon_days >= len(days))
-                    is_last_day_of_horizon = (day_idx == horizon_days - 1)
-                    if is_last_day_of_horizon and not is_last_day_of_month:
+                    if skip_saving_last_day(horizon_days, i, solved_day_idx, month_days):
                         continue
                     
-                    if day in profiles_dict and profiles_dict[day]:
-                        profile = profiles_dict[day]
-                        max_values = max_values_dict[day]
-                        initial_storage_state = initial_storage_states_dict[day]
-                        
-                        # Save intermediate results for this day
-                        intermediate_data = {
-                            "profile": profile,
-                            "new_param_vals": new_param_vals,
-                            "max_values": max_values,
-                            "prev_demand_dict": prev_demand_dict,
-                            "initial_storage_state": initial_storage_state,
-                        }
-                        intermediate_file = os.path.join(
-                            intermediate_dir, f"{design_key}_{month_key}_{day}.pkl"
-                        )
-                        intermediate_file = os.path.abspath(intermediate_file)
-                        with open(intermediate_file, "wb") as f:
-                            pickle.dump(intermediate_data, f)
-                        
-                        # Store final result for this day
-                        final_day_results[day] = (profile, new_param_vals, max_values)
-                        processed_days.add(day)
-                        
-                        # Add profiles to monthly data
-                        if "Edot_t_baseline" in profile:
-                            monthly_profiles["baseline"].extend(profile["Edot_t_baseline"])
-                            monthly_profiles["optimized"].extend(profile["Edot_t_net"])
-                    else:
-                        # Day failed
-                        final_day_results[day] = (None, new_param_vals, {"Ndot_c": 0, "Edot_c": 0})
-                        day_failures += 1
+                    profile = profiles_dict[solved_day]
+                    max_values = max_values_dict[solved_day]
+                    
+                    # Save intermediate results for this day
+                    intermediate_data = {
+                        "profile": profile,
+                        "new_param_vals": new_param_vals,
+                        "max_values": max_values,
+                        "prev_demand_dict": prev_demand_dict,
+                        "initial_storage_state": final_storage_state_prev_run,
+                    }
+                    intermediate_file = os.path.join(
+                        intermediate_dir, f"{design_key}_{month_key}_{solved_day}.pkl"
+                    )
+                    intermediate_file = os.path.abspath(intermediate_file)
+                    with open(intermediate_file, "wb") as f:
+                        pickle.dump(intermediate_data, f)
+                    
+                    # Store final result for this day
+                    month_results[solved_day] = (profile, max_values)
+                    processed_days.add(solved_day)
+                    
+
             else:
                 # N-day group failed
-                for day in group_days:
-                    if day in processed_days:
+                print("Saving dummy files to prevent re-solving")
+                for failed_day_idx, failed_day in enumerate(group_days):
+                    if skip_saving_last_day(horizon_days, i, failed_day_idx, month_days):
                         continue
-                    final_day_results[day] = (None, param_values, {"Ndot_c": 0, "Edot_c": 0})
+                    dummy_data = {
+                        "profile": None,
+                        "new_param_vals": param_values,
+                        "max_values": {"Ndot_c": 0, "Edot_c": 0},
+                        "prev_demand_dict": prev_demand_dict,
+                        "initial_storage_state": initial_storage_state,  # Preserve the storage state from previous horizon
+                        "failure_reason": "infeasible"
+                    }
+                    
+                    intermediate_file =  os.path.abspath(os.path.join(
+                        intermediate_dir, f"{design_key}_{month_key}_{failed_day}.pkl"
+                    ))
+                    with open(intermediate_file, "wb") as f:
+                        pickle.dump(dummy_data, f)
+                    
+                    month_results[failed_day] = (None, {"Ndot_c": 0, "Edot_c": 0})
                     day_failures += 1
         
         # Update prev_demand_dict with maximum demands from processed days
-        for day in processed_days:
-            profile = final_day_results[day][0]
+        for processed_day in processed_days:
+            profile = month_results[processed_day][0]
             day_max_dict = get_max_dict_from_profile(profile, demand_charge_info_dict)
-            for charge_key, charge_values in day_max_dict.items():
-                if charge_values["demand"] > prev_demand_dict[charge_key]["demand"]:
-                    prev_demand_dict[charge_key] = charge_values.copy()
+            if day_max_dict is None:
+                continue  # no updates to prev_demand_dict
+            else:
+                for charge_key, charge_values in day_max_dict.items():
+                    if charge_values["demand"] > prev_demand_dict[charge_key]["demand"]:
+                        prev_demand_dict[charge_key] = charge_values.copy()
         
         # Check for early termination due to infeasibility
         if day_failures > 0:
-            is_feasible, failure_reason, _ = check_design_feasibility(
-                [(day, final_day_results[day]) for day in processed_days], 
-                summer_multiplier, total_days
-            )
+            is_feasible, failure_reason, _ = check_design_feasibility(month_results, summer_multiplier)
             if not is_feasible:
                 print(f"  ✗ Design {design_key} in {month_key} marked as {failure_reason} after {day_failures} failures")
                 break
         
-        # Move to next group with 1-day overlap
-        i += (horizon_days - 1)
+        i += (horizon_days - 1)  # include 1 day overlap for next group
 
-    # Convert final results to month_results format
-    for day in days:
-        if day in final_day_results:
-            profile, new_param_vals, max_values = final_day_results[day]
-            month_results.append((day, (profile, new_param_vals, max_values)))
+    is_feasible, failure_reason, _ = check_design_feasibility(month_results, summer_multiplier)
 
-    # Convert lists to numpy arrays
-    monthly_profiles = {
-        "baseline": np.array(monthly_profiles["baseline"]),
-        "optimized": np.array(monthly_profiles["optimized"]),
-    }
-
-    is_feasible, failure_reason, _ = check_design_feasibility(
-        month_results, summer_multiplier, total_days
-    )
-
-    month_total_time = time.time() - month_start_time
-    print(f"Month {month_key} completed in {month_total_time:.3f}s")
+    print(f"Month {month_key} for design key {design_key} completed in {time.time() - month_start_time:.3f}s")
 
     return (
-        design_key,
         month_key,
         month_results,
         param_values,
-        monthly_profiles,
         summer_multiplier,
         is_feasible,
         failure_reason,
     )
-
 
 def is_valid_npv(npv):
     """Check if NPV is a valid finite number."""
@@ -588,6 +538,7 @@ def sample_from_multivariate_normal(
     points, npvs = [], []
     is_univariate = "battery" in upgrade_key or "liquid" in upgrade_key
     
+    print('Sampling from mvn')
     for design_key, design_data in all_designs.items():
         npv = design_data["metrics"]["npv"]["total"]
         if is_valid_npv(npv):
@@ -596,6 +547,7 @@ def sample_from_multivariate_normal(
             npvs.append(npv)
     
     if not points:
+        print('No points found')
         return [], None
     
     points, npvs = np.array(points), np.array(npvs)
@@ -622,7 +574,7 @@ def sample_from_multivariate_normal(
         sigma = np.sqrt(max(var, min_variance))
         mu_sigma = {"mu": float(mu[0]), "sigma": float(sigma)}
     else:
-        # Calculate weighted covariance
+        print('Calculating weighted covariance')
         centered = elite_points - mu
         cov = np.zeros((2, 2))
         for i in range(len(elite_points)):
@@ -777,35 +729,30 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
 
     # Initialize results
     opex = {
-        "new": {"h2": 0, "energy": 0, "demand": 0, "customer": 0},
-        "baseline": {"h2": 0, "energy": 0, "demand": 0, "customer": 0},
-        "savings": {"h2": 0, "energy": 0, "demand": 0, "customer": 0},
+        "new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0},
     }
 
-    # Calculate costs for each type
+    new_itemized_costs, _ = costs.calculate_itemized_cost(
+        charge_dict,
+        {"electric": profiles},
+        resolution="15m",
+        desired_utility="electric",
+        decompose_exports=True
+    )
+
+    baseline_itemized_costs, _ = costs.calculate_itemized_cost(
+        charge_dict,
+        {"electric": baseline_profiles},
+        resolution="15m",
+        desired_utility="electric",
+        decompose_exports=True
+    )
+
+    # Extract individual costs
     for key in ("energy", "demand", "export", "customer"):
-        new_cost = costs.calculate_cost(
-            charge_dict,
-            {"electric": profiles},
-            resolution="15m",
-            desired_utility="electric",
-            desired_charge_type=key,
-            decompose_exports=True
-        )[0]
-
-        baseline_cost = costs.calculate_cost(
-            charge_dict,
-            {"electric": baseline_profiles},
-            resolution="15m",
-            desired_utility="electric",
-            desired_charge_type=key,
-            decompose_exports=True
-        )[0]
-
-        opex["new"][key] = new_cost
-        opex["baseline"][key] = baseline_cost
-        opex["savings"][key] = baseline_cost - new_cost
-        # print(f"  {key} savings: ${baseline_cost - new_cost:,.2f} (baseline: ${baseline_cost:,.2f}, new: ${new_cost:,.2f})")
+        opex["new"][key] = new_itemized_costs["electric"][key]
+        opex["baseline"][key] = baseline_itemized_costs["electric"][key]
+        opex["savings"][key] = opex["baseline"][key] - opex["new"][key]
 
     # Initialize metrics dictionary
     monthly_metrics = {
@@ -844,9 +791,11 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
         monthly_metrics["H2"] = h2_metrics["H2"]
         opex["new"]["h2"] = -h2_metrics["h2_value"]
         opex["savings"]["h2"] = h2_metrics["h2_value"]
-        # print(f"  h2 savings: ${h2_metrics['h2_value']:,.2f}")
-
-    return opex, monthly_metrics, replacements
+    return {
+        "replacements": replacements,
+        "monthly_metrics": monthly_metrics,
+        "opex": opex
+    }
 
 
 def calculate_itemized_npv(electricity_savings_dict, capex, years=10):
@@ -874,10 +823,14 @@ def calculate_itemized_npv(electricity_savings_dict, capex, years=10):
 def get_max_dict_from_profile(profile, demand_charge_info_dict):
     """For each demand charge, get max from optimized profile for the window"""
     prev_demand_dict = {}
+    
+    if profile is None:  # Failed day
+        return None
+    
     if "Edot_t_net" in profile:
         power_profile = profile["Edot_t_net"]
     else:
-        return {k: {"demand": 0.0, "cost": 0.0} for k in demand_charge_info_dict if "demand" in k}
+        return None
     
     for charge_key, charge in demand_charge_info_dict.items():
         if "demand" not in charge_key:
@@ -999,6 +952,17 @@ def run_configuration(
     # Load intermediate results if available
     intermediate_files = load_intermediate_results(run_name, config_name)
 
+    # Load existing results from other configs
+    all_results = {}
+    output_dir = f"aeration_flexibility/output_data/{run_name}"
+    for filename in os.listdir(output_dir):
+        if filename.endswith('.pkl') and filename != 'day_profiles.pkl':
+            config_file_path = os.path.join(output_dir, filename)
+            with open(config_file_path, 'rb') as f:
+                config_results = pickle.load(f)
+                if 'all_results' in config_results:
+                    all_results.update(config_results['all_results'])
+
     # Load day profiles
     with open(f"aeration_flexibility/output_data/{run_name}/day_profiles.pkl", "rb") as f:
         day_profiles = pickle.load(f)
@@ -1018,15 +982,14 @@ def run_configuration(
             volume_to_moles_stp(day_data["profile"]["Blower_AerationBasin_Air_Flow"])
             * o2_multiplier_map[gas] * frac_o2_map['air'] / 24
         )  # Blower_AerationBasin_Air_Flow is in m3 air/day so divide by 24 and multiply by o2 fraction
+        Ndot_target_day *= float(summer_multiplier)
+        # if int(summer_smoothing) > 0:
+        #     Ndot_target_day = np.convolve(
+        #         Ndot_target_day,
+        #         np.ones(int(summer_smoothing)) / int(summer_smoothing),
+        #         mode="same",
+        #     )
 
-        if is_summer(month):
-            Ndot_target_day *= float(summer_multiplier)
-            if int(summer_smoothing) > 0:
-                Ndot_target_day = np.convolve(
-                    Ndot_target_day,
-                    np.ones(int(summer_smoothing)) / int(summer_smoothing),
-                    mode="same",
-                )
         baseline_vals = get_baseline_param_vals(
             Ndot_target=Ndot_target_day,
             Edot_rem=day_data["profile"]["VirtualDemand_RestOfFacilityPower"],
@@ -1044,14 +1007,14 @@ def run_configuration(
     else:
         Edot_c_max = Edot_t_max
 
-    storage_type = upgrade_key.split("__")[1]
     if Ndot_b_max == None:
-        Ndot_b_max = (
-            np.max(Ndot_target_year)
-            / (1 if storage_type == "none" else float(summer_multiplier))
-            * 1.02
-        )
-
+        if float(summer_multiplier) > 1.0:
+            Ndot_b_max = (
+                np.percentile(Ndot_target_year, 99) / float(summer_multiplier)
+            )
+            print(f"setting Ndot_b_max to {Ndot_b_max} (out of annual max {np.max(Ndot_target_year)} for summer_multiplier {summer_multiplier}")
+        else:
+            Ndot_b_max = np.max(Ndot_target_year)
     limits = {
         "Ndot_target_min": np.min(Ndot_target_year),
         "Ndot_target_max": np.max(Ndot_target_year),
@@ -1127,7 +1090,6 @@ def run_configuration(
         design_points = initial_points
 
     # Initialize results storage
-    all_results = {}
     mu_sigma_history = []
     sampled_points_history = []
     iteration = 0
@@ -1235,9 +1197,9 @@ def run_configuration(
             param_values = get_new_param_vals_function(next(iter(day_profiles)), design_key, base_wwtp_key,
                                               upgrade_key, tariff_key, limits)
 
-            for month_key_and_days in month_to_days.items():
-                job_queue.append((design_key, month_key_and_days, base_wwtp_key, upgrade_key, tariff_key,
-                                  limits,baseline_val_dict,param_values,))
+            for month_key, month_days in month_to_days.items():
+                job_queue.append((design_key, month_key, month_days, base_wwtp_key, upgrade_key, tariff_key,
+                                  limits, baseline_val_dict, param_values))
 
         # Create parent directories for intermediate results
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
@@ -1283,12 +1245,12 @@ def run_configuration(
                         results.append(result)
                         
                         # Check if this design is infeasible using centralized function
-                        if result and len(result) >= 8:  # Updated to include feasibility fields
-                            month_results = result[2]  # month_results
-                            summer_multiplier = result[5]  # summer_multiplier
-                            is_feasible = result[6]  # is_feasible
-                            failure_reason = result[7]  # failure_reason
-                            
+                        if result:  # Updated to include feasibility fields
+                            month_results = result[1]  # month_results
+                            summer_multiplier = result[3]  # summer_multiplier
+                            is_feasible = result[4]  # is_feasible
+                            failure_reason = result[5]  # failure_reason
+
                             if not is_feasible:
                                 infeasible_designs.add(design_key)
                                 print(f"Design {design_key} marked as {failure_reason}, pruning smaller hours")
@@ -1324,15 +1286,12 @@ def run_configuration(
             monthly_data = {}
             monthly_max_values = {}
             month_failures = {}
-            month_profiles = {}
             design_failed = False  # Flag to track if design should be skipped
 
             for (
-                _,
                 month_key,
                 month_results,
                 param_values,
-                monthly_profiles_data,
                 summer_multiplier,
                 is_feasible,
                 failure_reason,
@@ -1357,9 +1316,6 @@ def run_configuration(
                 month_days = []
                 monthly_max_values[month_key] = {"Ndot_c": 0, "Edot_c": 0}
 
-                # Store monthly profiles
-                month_profiles[month_key] = monthly_profiles_data
-
                 # Initialize monthly_data structure for this month
                 monthly_data[month_key] = {
                     "days": [],
@@ -1376,9 +1332,8 @@ def run_configuration(
                 # Process each day's results
                 for date, (
                     profile,
-                    new_param_vals,
                     max_values,
-                ) in month_results:
+                ) in month_results.items():
                     month_days.append(date)
                     if profile and "Edot_t_net" in profile:
                         profile["param_values"] = param_values
@@ -1433,22 +1388,18 @@ def run_configuration(
                 ]
             }
 
-            # Get storage type from upgrade key
-            storage_type = upgrade_key.split("__")[1]
-
             for month_key, month_data in monthly_data.items():
-                monthly_opex, monthly_metrics, replacements = calculate_monthly_metrics(
+                complete_monthly_data = calculate_monthly_metrics(
                     month_data, tariff_key, upgrade_key
                 )
-                # Check if monthly_opex is empty (indicating failure)
-                if not monthly_opex:
+                if not complete_monthly_data["opex"]:
                     print(f"  Skipping metrics calculation for {month_key} due to empty monthly_opex")
                     continue
                 for name in ["new", "baseline", "savings"]:
                     for k in opex_keys:
-                        annual_opex[name][k] += monthly_opex[name][k]
+                        annual_opex[name][k] += complete_monthly_data["opex"][name][k]
                 for k in metric_lists:
-                    metric_lists[k].append(monthly_metrics[k])
+                    metric_lists[k].append(complete_monthly_data["monthly_metrics"][k])
 
             # Scale annual OPEX values to 1-year for annual savings
             num_months = len(monthly_data)
@@ -1513,13 +1464,12 @@ def run_configuration(
                     storage_type=upgrade_key.split("__")[1],
                     new_o2_supply_tech=upgrade_key.split("__")[0],
                     base_wwtp_key=base_wwtp_key,
-                    summer_multiplier=summer_multiplier,
                     limits=limits,
                 )
             )
             
             npv = calculate_itemized_npv(
-                annual_savings=annual_savings,
+                electricity_savings_dict=annual_savings,
                 capex=capex
             )
             npv["from capex savings"] = counterfactual_capex
@@ -1527,7 +1477,7 @@ def run_configuration(
                 f" {design_key} NPV energy ${npv['by_component']['energy']:,.2f} demand ${npv['by_component']['demand']:,.2f} export ${npv['by_component']['export']:,.2f} H2 ${npv['by_component']['h2']:,.2f} Total ${npv['total']:,.2f} capex {capex}"
             )
 
-            # Update limits with calculated values
+            # Store results
             limits.update(
                 {
                     "V_tank": param_values.get("V_tank", None),
@@ -1535,8 +1485,6 @@ def run_configuration(
                     "E_max": param_values.get("E_max", None),
                 }
             )
-
-            # Store results
             annual_metrics.update(
                 {"npv": npv, "capex": capex, "tank_metrics": tank_metrics}
             )
@@ -1544,7 +1492,7 @@ def run_configuration(
                 "design_key": design_key,
                 "metrics": {
                     **annual_metrics,
-                    "month_profiles": month_profiles,  # Add monthly profiles to metrics
+                    "month_profiles": monthly_data,  # Add monthly data to metrics
                 },
                 "limits": limits,
                 "daily_results": {
@@ -1554,21 +1502,19 @@ def run_configuration(
                 },
             }
 
-            # Clean up design point specific data
+            # Clean up memory
             del daily_results
             del monthly_data
             del monthly_max_values
             del month_failures
-            del month_profiles
             del annual_metrics
             del annual_opex
             del metric_lists
             del annual_savings
             del capex_components
 
-        # Clean up memory after each iteration
         del results
-        gc.collect()  # Force garbage collection
+        gc.collect()
 
         iteration += 1
 

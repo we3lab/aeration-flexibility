@@ -14,28 +14,15 @@ E = 0.98  # Joint eff
 
 
 def convert_to_2025_dollars(cost: float, from_year: int) -> float:
-    """Convert a cost from a given year to 2025 dollars using inflation data.
+    """Convert a cost from a given year to 2025 dollars using inflation data."""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    inflation_df = pd.read_csv(os.path.join(project_root, "data", "inflation.csv"))
 
-    Args:
-        cost: Cost in dollars from the source year
-        from_year: Year the cost is from (e.g. 2023). Must be less than 2025
-
-    Returns:
-        Cost converted to 2025 dollars
-    """
-    # Read inflation data
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(current_dir)
-    inflation_path = os.path.join(project_root, "data", "inflation.csv")
-    inflation_df = pd.read_csv(inflation_path)
-
-    # Get the average inflation for each year
     yearly_inflation = (
         inflation_df.set_index("Year")["Average"].str.rstrip("%").astype(float) / 100
-    )
+    )  # get value as float
 
-    # Calculate cumulative inflation from source year to 2025
-    # Forward inflation (multiply by (1 + inflation) for each year)
+    # Calculate cumulative forward inflation from source year to 2025
     cumulative_inflation = 1.0
     for year in range(from_year, 2025):
         if year in yearly_inflation.index:
@@ -310,7 +297,7 @@ def compressor_cost(power: float) -> float:
     return convert_to_2025_dollars(1880 * power_hp**0.671, 2023)  # TODO: check year
 
 
-def calculate_capex(sub_dict: dict, storage_type: str, new_o2_supply_tech: str, base_wwtp_key: float, limits: dict):
+def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, limits):
     """Calculate capital expenditure for a given configuration.
 
     Args:
@@ -338,7 +325,6 @@ def calculate_capex(sub_dict: dict, storage_type: str, new_o2_supply_tech: str, 
         E_max = sub_dict["param_vals"]["E_max"]
         max_Edot_c = sub_dict["param_vals"]["max_Edot_c"] + 1e-4
         storage_cost = battery_system_cost(E_max, max_Edot_c)
-
     # Hydrogen storage cost
     h2_storage_cost = 0
     if "elec" in new_o2_supply_tech and "tank" in storage_type:
@@ -364,7 +350,7 @@ def calculate_capex(sub_dict: dict, storage_type: str, new_o2_supply_tech: str, 
     # Total capex, adding additional costs
     base_equipment_cost = storage_cost + o2_tech_cost + h2_storage_cost + solar_cost
     if any(np.isnan(x) for x in [storage_cost, h2_storage_cost, o2_tech_cost, solar_cost]):
-        total_capex, engineering_cost, construction_cost = np.nan, np.nan, np.nan
+        total_capex, engineering_management_cost, construction_cost = np.nan, np.nan, np.nan
     else:
         if storage_type == "battery":  # smaller additional costs
             construction_cost = 0.1 * base_equipment_cost
@@ -392,8 +378,7 @@ def calculate_capex(sub_dict: dict, storage_type: str, new_o2_supply_tech: str, 
         "o2_tech_cost": o2_tech_cost,
         "solar_cost": solar_cost,
         "construction_and_management_cost": (
-            engineering_cost + construction_cost if not np.isnan(total_capex) else np.nan
+            engineering_management_cost + construction_cost if not np.isnan(total_capex) else np.nan
         ),
     }
-
     return total_capex, tank_metrics, capex_components, counterfactual_capex

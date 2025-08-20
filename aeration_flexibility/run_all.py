@@ -8,7 +8,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
-from helpers.tariffs import get_tariff_config_keys, get_tariff_configs
+from helpers.tariffs import get_tariff_configs
 from helpers.ingest_data import ingest_data
 from helpers.plotting import generate_plots
 from helpers.design_optimization_algorithm import run_configuration
