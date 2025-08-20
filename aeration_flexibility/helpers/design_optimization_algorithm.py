@@ -184,7 +184,7 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
     return None, None, None, None
 
 def get_new_param_vals_function(date, design_key, base_wwtp_key, upgrade_key, tariff_key, limits):
-    # Create problem instance just to get param vals
+    # Create problem instance just to get param vals from the first valid day
     problem = O2Problem(
         single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
         design_key=design_key, limits=limits, date=date, data_wwtp='svcw',
@@ -236,43 +236,6 @@ def extract_final_storage_state(profile):
     return final_storage_state if final_storage_state else None
 
 
-def load_intermediate_results(run_name, config_name):
-    """Load file paths of already-solved intermediate results if available."""
-    intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
-    intermediate_dir = os.path.abspath(intermediate_dir)  # Convert to absolute path
-    
-    if not os.path.exists(intermediate_dir):
-        print("   No intermediate files found")
-        return {}
-    
-    intermediate_files = {}
-    all_files = os.listdir(intermediate_dir)
-    print(f"  Found {len(all_files)} files in directory")
-    
-    # Look for intermediate files
-    for filename in all_files:
-        if filename.endswith('.pkl'):
-            # Parse filename: design_key_month_key_date.pkl E.g.: 4.17__473.3_2022-07_2022-07-01.pkl
-            base_name = filename.replace('.pkl', '')
-            last_underscore_pos = base_name.rfind('_')
-            second_last_underscore_pos = base_name.rfind('_', 0, last_underscore_pos)
-            design_key = base_name[:second_last_underscore_pos]
-            month_key = base_name[second_last_underscore_pos + 1:last_underscore_pos]
-            date = base_name[last_underscore_pos + 1:]
-                        
-            # Store file path instead of loading data
-            if design_key not in intermediate_files:
-                intermediate_files[design_key] = {}
-            if month_key not in intermediate_files[design_key]:
-                intermediate_files[design_key][month_key] = {}
-            
-            file_path = os.path.join(intermediate_dir, filename)
-            file_path = os.path.abspath(file_path)  # Convert to absolute path
-            intermediate_files[design_key][month_key][date] = file_path
-    
-    return intermediate_files
-
-
 def check_design_feasibility(month_results, summer_multiplier):
     """
     Centralized function to check if a design is feasible based on month results.
@@ -305,7 +268,7 @@ def skip_saving_last_day(horizon_days, i, day_idx, days):
     is_last_day_of_horizon = (day_idx == horizon_days - 1)
     return is_last_day_of_horizon and not is_last_day_of_month
 
-def process_design_point_and_month(design_point_data, run_name, intermediate_files=None, horizon_days=3):
+def process_design_point_and_month(design_point_data, run_name, intermediate_filepaths=None, horizon_days=3):
     """Process a single design point and month combination using N-day optimization with 1-day overlap.
 
     Args:
@@ -313,7 +276,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                                    base_wwtp_key, upgrade_key, tariff_key, limits,
                                    baseline_val_dict, param_values)
         run_name: Name of the run for saving intermediate results
-        intermediate_files: Dictionary of file paths to already-solved intermediate results
+        intermediate_filepaths: Dictionary of file paths to already-solved intermediate results
         horizon_days: Number of days to process in each horizon (default 3)
     """
     (design_key, month_key, month_days, base_wwtp_key, upgrade_key,
@@ -350,15 +313,13 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     if tariff_key not in tariff_data:
         print(f"Warning: Tariff key {tariff_key} not found in tariff data")
         return (design_key, month_key, [], param_values, {"baseline": [], "optimized": []}, 
-                summer_multiplier, False, "tariff_not_found")
+                False, "tariff_not_found")
     
     charge_dict_month = get_charge_dict_for_month(tariff_data[tariff_key], int(year), int(month))
 
-    # Track which days have been processed and their final results
+    # Process days in overlapping groups with 1-day overlap
     processed_days = set()
     month_results = {}  # Store the final result for each day
-    
-    # Process days in overlapping groups with 1-day overlap
     i = 0
     day_failures = 0
     while i < len(month_days):
@@ -366,9 +327,9 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
         
         # Check if we have intermediate results for all days in this group
         all_intermediate_available = True
-        if intermediate_files and design_key in intermediate_files and month_key in intermediate_files[design_key]:
+        if intermediate_filepaths and design_key in intermediate_filepaths and month_key in intermediate_filepaths[design_key]:
             for group_day in group_days:
-                if group_day not in intermediate_files[design_key][month_key]:
+                if group_day not in intermediate_filepaths[design_key][month_key]:
                     all_intermediate_available = False
                     break
         else:
@@ -376,7 +337,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
         
         if all_intermediate_available:
             for group_day in group_days:
-                with open(intermediate_files[design_key][month_key][group_day], 'rb') as f:
+                with open(intermediate_filepaths[design_key][month_key][group_day], 'rb') as f:
                     group_day_data = pickle.load(f)
                 
                 profile = group_day_data["profile"]
@@ -444,7 +405,6 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                     month_results[solved_day] = (profile, max_values)
                     processed_days.add(solved_day)
                     
-
             else:
                 # N-day group failed
                 print("Saving dummy files to prevent re-solving")
@@ -494,10 +454,10 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     print(f"Month {month_key} for design key {design_key} completed in {time.time() - month_start_time:.3f}s")
 
     return (
+        design_key,
         month_key,
         month_results,
         param_values,
-        summer_multiplier,
         is_feasible,
         failure_reason,
     )
@@ -902,17 +862,16 @@ def get_demand_charge_info_dict(tariff_key, month, year):
 
 def run_configuration(
     config,
-    base_run_name,
+    run_name,
     designs_per_run,
     o2_range,
     comp_ratio_range,
     n_jobs,
     max_iterations,
     skip_already_run=True,
-    Ndot_b_max=None,
     horizon_days=3,
 ):
-    """Run optimization for a single configuration.
+    """Run optimization for a single configuration (combination of base facility, upgrade key, tariff key).
     
     Args:
         config: Configuration dictionary
@@ -927,20 +886,13 @@ def run_configuration(
         ingest_gas: Gas ingestion configuration
         horizon_days: Number of days to process in each rolling horizon (default 3)
     """
-    # Use base_run_name directly instead of adding suffix to run_name
-    run_name = base_run_name
-
     output_dir = f"aeration_flexibility/output_data/{run_name}"
     os.makedirs(output_dir, exist_ok=True)
 
     base_wwtp_key = config["base_wwtp_key"]
     upgrade_key = config["upgrade_key"]
     tariff_key = config["tariff_key"]
-    
-    # Get summer suffix from config
     suffix = get_summer_key(config['summer_config']["multiplier"],config['summer_config']["smoothing"])
-    
-    # Create config_name with summer suffix included
     config_name = get_config_name(base_wwtp_key, config['upgrade_key'], config['tariff_key'], suffix)
 
     if skip_already_run and os.path.exists(f"aeration_flexibility/output_data/{run_name}/{config_name}.pkl"):
@@ -949,96 +901,107 @@ def run_configuration(
 
     print(f"\nProcessing {config_name}")
 
-    # Load intermediate results if available
-    intermediate_files = load_intermediate_results(run_name, config_name)
+    # Save intermediate file paths if available
+    intermediate_dir = os.path.abspath(f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}")
+    if not os.path.exists(intermediate_dir):
+        print("   No intermediate files found")
+        intermediate_filepaths = {}
+    else:
+        intermediate_filepaths = {}
+        all_files = os.listdir(intermediate_dir)
+        print(f"  Found {len(all_files)} files in directory")
+        
+        # Look for and store intermediate file paths
+        for filename in all_files:
+            if filename.endswith('.pkl'):  # structure design_key_month_key_date.pkl E.g.: 4.17__473.3_2022-07_2022-07-01.pkl
+                base_name = filename.replace('.pkl', '')
+                last_underscore_pos = base_name.rfind('_')
+                second_last_underscore_pos = base_name.rfind('_', 0, last_underscore_pos)
+                design_key = base_name[:second_last_underscore_pos]
+                month_key = base_name[second_last_underscore_pos + 1:last_underscore_pos]
+                date = base_name[last_underscore_pos + 1:]        
+                if design_key not in intermediate_filepaths:
+                    intermediate_filepaths[design_key] = {}
+                if month_key not in intermediate_filepaths[design_key]:
+                    intermediate_filepaths[design_key][month_key] = {}
+                intermediate_filepaths[design_key][month_key][date] = os.path.abspath(os.path.join(intermediate_dir, filename))
 
-    # Load existing results from other configs
+    # Load existing results for this config
     all_results = {}
-    output_dir = f"aeration_flexibility/output_data/{run_name}"
-    for filename in os.listdir(output_dir):
-        if filename.endswith('.pkl') and filename != 'day_profiles.pkl':
-            config_file_path = os.path.join(output_dir, filename)
-            with open(config_file_path, 'rb') as f:
-                config_results = pickle.load(f)
-                if 'all_results' in config_results:
-                    all_results.update(config_results['all_results'])
+    config_file_path = os.path.join(output_dir, f"{config_name}.pkl")
+    if os.path.exists(config_file_path):
+        with open(config_file_path, 'rb') as f:
+            config_results = pickle.load(f)
+            if 'all_results' in config_results:
+                all_results.update(config_results['all_results'])
+                print(f"  Loaded existing results for {config_name}")
+    else:
+        print(f"  No existing results found for {config_name}")
 
-    # Load day profiles
+    # Load day profiles and group days by month
     with open(f"aeration_flexibility/output_data/{run_name}/day_profiles.pkl", "rb") as f:
         day_profiles = pickle.load(f)
+    month_to_days = {}
+    for date in sorted(day_profiles):
+        year, month, _ = date.split("-")
+        month_key = f"{year}-{int(month):02d}"
+        if month_key not in month_to_days:
+            month_to_days[month_key] = []
+        month_to_days[month_key].append(date)
 
     gas, o2_tech_base, summer_multiplier, summer_smoothing = split_key(base_wwtp_key)
 
-    # First loop to calculate baseline values
+    # First loop to calculate baseline values based on Ndot_target
     baseline_val_dict = {}
-
-    # Initialize monthly_Edot_t_max with all demand charges for each month
     for date, day_data in day_profiles.items():
         year, month = day_data["year"], day_data["month"]
         month_key = f"{month:02d}"
-
-        # Calculate baseline o2 flow for this base_wwtp_key
         Ndot_target_day = (
             volume_to_moles_stp(day_data["profile"]["Blower_AerationBasin_Air_Flow"])
             * o2_multiplier_map[gas] * frac_o2_map['air'] / 24
         )  # Blower_AerationBasin_Air_Flow is in m3 air/day so divide by 24 and multiply by o2 fraction
         Ndot_target_day *= float(summer_multiplier)
         # if int(summer_smoothing) > 0:
-        #     Ndot_target_day = np.convolve(
-        #         Ndot_target_day,
-        #         np.ones(int(summer_smoothing)) / int(summer_smoothing),
-        #         mode="same",
-        #     )
+        #     Ndot_target_day = np.convolve(Ndot_target_day, np.ones(int(summer_smoothing)) / int(summer_smoothing), mode="same")
 
-        baseline_vals = get_baseline_param_vals(
+        baseline_val_dict[date] = get_baseline_param_vals(
             Ndot_target=Ndot_target_day,
             Edot_rem=day_data["profile"]["VirtualDemand_RestOfFacilityPower"],
             base_wwtp_key=base_wwtp_key
         )
-        baseline_val_dict[date] = baseline_vals
 
     # Calculate system limits
-    Ndot_target_year = np.array(
-        [val["Ndot_target"] for val in baseline_val_dict.values()]
-    )
+    Ndot_target_year = np.array([val["Ndot_target"] for val in baseline_val_dict.values()])
     Edot_t_max = max(0, np.max([val["Edot_t_baseline"] for val in baseline_val_dict.values()]))
-    if float(summer_multiplier) == 1.0:
-        Edot_c_max = Edot_t_max * 0.2
+    if float(summer_multiplier) > 1.0:
+        Ndot_b_max = (
+            np.percentile(Ndot_target_year, 99) / float(summer_multiplier)
+        )
+        Edot_c_max = Edot_t_max / float(summer_multiplier)
+        print(f"setting Ndot_b_max to {Ndot_b_max} (out of annual max {np.max(Ndot_target_year)} for summer_multiplier {summer_multiplier}")
     else:
+        Ndot_b_max = np.max(Ndot_target_year)
         Edot_c_max = Edot_t_max
-
-    if Ndot_b_max == None:
-        if float(summer_multiplier) > 1.0:
-            Ndot_b_max = (
-                np.percentile(Ndot_target_year, 99) / float(summer_multiplier)
-            )
-            print(f"setting Ndot_b_max to {Ndot_b_max} (out of annual max {np.max(Ndot_target_year)} for summer_multiplier {summer_multiplier}")
-        else:
-            Ndot_b_max = np.max(Ndot_target_year)
+    
     limits = {
         "Ndot_target_min": np.min(Ndot_target_year),
         "Ndot_target_max": np.max(Ndot_target_year),
         "Ndot_target_mean": np.mean(Ndot_target_year),
         "Ndot_b_max": Ndot_b_max,
         "Edot_t_max": Edot_t_max,
-        "Edot_b_mean": np.mean(
-            [val["Edot_b_baseline"] for val in baseline_val_dict.values()]
-        ),
+        "Edot_b_mean": np.mean([val["Edot_b_baseline"] for val in baseline_val_dict.values()]),
         "Edot_c_max": Edot_c_max,
     }
 
     # Initialize optimization
-    if "design_point" in config:
-        # Use the specified design point
-        design_points = [config["design_point"]]
-    else:
-        # Use the original design point generation logic
+    if "design_point" in config:  # if specified (i.e for tornado)
+        initial_design_points = [config["design_point"]]
+    else:  # Specify initial design points
         if "battery" in upgrade_key or "liquid" in upgrade_key:
-            # For battery or liquid tank, only use O2 range (compression ratio fixed at 100.0)
             h_min, h_max = o2_range
             h_center = (h_min + h_max) / 2
             
-            initial_points = [
+            initial_design_points = [
                 # Fixed comparison point
                 (1.0, 100.0),
                 
@@ -1051,18 +1014,15 @@ def run_configuration(
                 ((h_min + h_center) / 2, 100.0),
                 ((h_max + h_center) / 2, 100.0),
             ]
-            # Round all values for consistency
-            initial_points = [(round(hours, 2), round(ratio, 1)) for hours, ratio in initial_points]
+            initial_design_points = [(round(hours, 2), round(ratio, 1)) for hours, ratio in initial_design_points]
         else:
-            # For gas tank, use both O2 range and compression ratio range
             # Calculate center and boundary points
             h_min, h_max = o2_range
             r_min, r_max = comp_ratio_range
             h_center = (h_min + h_max) / 2
             r_center = (r_min + r_max) / 2
             
-            # Create initial points with strategic placement between center and corners
-            initial_points = [
+            initial_design_points = [
                 # Fixed comparison point
                 (1.0, 100.0),
                 
@@ -1085,9 +1045,7 @@ def run_configuration(
                 (h_min, r_center),  # left edge
                 (h_max, r_center),  # right edge
             ]
-            # Round all values for consistency
-            initial_points = [(round(hours, 2), round(ratio, 1)) for hours, ratio in initial_points]
-        design_points = initial_points
+            initial_design_points = [(round(hours, 2), round(ratio, 1)) for hours, ratio in initial_design_points]
 
     # Initialize results storage
     mu_sigma_history = []
@@ -1101,7 +1059,6 @@ def run_configuration(
     min_iterations = 3  # Minimum iterations before checking convergence
 
     # Get initial design points
-    initial_design_points = design_points
     sampled_points_history.append(list(initial_design_points))
 
     # Main optimization loop
@@ -1125,23 +1082,10 @@ def run_configuration(
                 print("No valid points generated for sampling. Stopping optimization.")
                 break
             
-            # Print current best NPV for context
-            current_best_npv = max(
-                [
-                    result["metrics"]["npv"]["total"]
-                    for result in all_results.values()
-                    if is_valid_npv(result["metrics"]["npv"]["total"])
-                ],
-                default=-np.inf,
-            )
-            print(f"Current best NPV: ${current_best_npv:,.2f}")
-            
             mu_sigma_history.append(mu_sigma)
 
         # Track which points were sampled this iteration
         sampled_points_history.append(list(design_points))
-
-        # Filter out already-solved design points
         unsolved_points = [
             pt for pt in design_points if f"{pt[0]}__{pt[1]}" not in all_results
         ]
@@ -1150,7 +1094,7 @@ def run_configuration(
             iteration += 1
             continue
 
-        # Get current best NPV
+        # Get current best NPV and check for convergence
         current_best_npv = max(
             [
                 result["metrics"]["npv"]["total"]
@@ -1159,8 +1103,6 @@ def run_configuration(
             ],
             default=-np.inf,
         )
-
-        # Check for convergence (only after minimum iterations)
         if iteration >= min_iterations and current_best_npv > best_npv:
             improvement = (
                 (current_best_npv - best_npv) / abs(best_npv)
@@ -1169,31 +1111,20 @@ def run_configuration(
             )
             if improvement < convergence_threshold:
                 no_improvement_count += 1
-                if no_improvement_count >= 3:  # Increased patience
+                if no_improvement_count >= 2:
                     print(f"Convergence reached after {iteration + 1} iterations")
                     print(f"Best NPV: ${current_best_npv:,.2f}")
                     break
             else:
                 no_improvement_count = 0
+                print(f"Current best NPV: ${current_best_npv:,.2f}, continuing")
             best_npv = current_best_npv
 
-        # Group days by month
-        month_to_days = {}
-        for date in sorted(day_profiles):
-            year, month, _ = date.split("-")
-            month_key = f"{year}-{int(month):02d}"
-            if month_key not in month_to_days:
-                month_to_days[month_key] = []
-            month_to_days[month_key].append(date)
-
-        # Sort design points by hours (descending) for prioritization
+        # Sort design points by hours (descending) and create job queue with design point-month combinations
         sorted_unsolved_points = sorted(unsolved_points, key=lambda x: x[0], reverse=True)
-        
-        # Create job queue with design point-month combinations, prioritized by hours
         job_queue = []
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
-            # Get param values from first valid day
             param_values = get_new_param_vals_function(next(iter(day_profiles)), design_key, base_wwtp_key,
                                               upgrade_key, tariff_key, limits)
 
@@ -1214,15 +1145,12 @@ def run_configuration(
         # Process jobs with dynamic pruning
         print(f"Processing {len(job_queue)} jobs with {n_jobs} workers...")
         with Pool(processes=n_jobs) as pool:
-            # Submit initial batch of jobs (up to n_jobs)
+            # Submit initial batch of up to n_jobs jobs
             pending_jobs = {}
             job_index = 0
-            
-            # Submit initial jobs
             while len(pending_jobs) < n_jobs and job_index < len(job_queue):
                 job_data = job_queue[job_index]
-                Hours_of_O2, compression_ratio = job_data[0], job_data[1]
-                design_key = f"{Hours_of_O2}__{compression_ratio}"
+                design_key = job_data[0]  # design_key is now the first element
                 
                 # Skip if this design is already known to be infeasible
                 if design_key in infeasible_designs:
@@ -1231,7 +1159,7 @@ def run_configuration(
                 
                 # Submit job
                 async_result = pool.apply_async(process_design_point_and_month, 
-                                                args=(job_data, run_name, intermediate_files, horizon_days))
+                                                args=(job_data, run_name, intermediate_filepaths, horizon_days))
                 pending_jobs[async_result] = (job_index, design_key)
                 job_index += 1
             
@@ -1244,10 +1172,11 @@ def run_configuration(
                         result = async_result.get()
                         results.append(result)
                         
-                        # Check if this design is infeasible using centralized function
-                        if result:  # Updated to include feasibility fields
-                            month_results = result[1]  # month_results
-                            summer_multiplier = result[3]  # summer_multiplier
+                        if result and len(result) >= 6:  # Check we have all fields
+                            design_key_from_result = result[0]
+                            month_key = result[1]
+                            month_results = result[2]  # month_results
+                            param_values = result[3]
                             is_feasible = result[4]  # is_feasible
                             failure_reason = result[5]  # failure_reason
 
@@ -1258,8 +1187,7 @@ def run_configuration(
                         # Submit next job if available
                         while job_index < len(job_queue):
                             job_data = job_queue[job_index]
-                            Hours_of_O2, compression_ratio = job_data[0], job_data[1]
-                            design_key = f"{Hours_of_O2}__{compression_ratio}"
+                            design_key = job_data[0]  # design_key is now the first element
                             
                             # Skip if this design is already known to be infeasible
                             if design_key in infeasible_designs:
@@ -1268,7 +1196,7 @@ def run_configuration(
                             
                             # Submit job
                             async_result = pool.apply_async(process_design_point_and_month, 
-                                                            args=(job_data, run_name, intermediate_files, horizon_days))
+                                                            args=(job_data, run_name, intermediate_filepaths, horizon_days))
                             pending_jobs[async_result] = (job_index, design_key)
                             job_index += 1
                             break
@@ -1289,10 +1217,10 @@ def run_configuration(
             design_failed = False  # Flag to track if design should be skipped
 
             for (
+                design_key_from_result,
                 month_key,
                 month_results,
                 param_values,
-                summer_multiplier,
                 is_feasible,
                 failure_reason,
             ) in design_results:
@@ -1313,28 +1241,20 @@ def run_configuration(
                     design_failed = True
                     break  # Exit month loop
                     
-                month_days = []
                 monthly_max_values[month_key] = {"Ndot_c": 0, "Edot_c": 0}
 
                 # Initialize monthly_data structure for this month
                 monthly_data[month_key] = {
                     "days": [],
                     "profiles": {
-                        "Edot_t_net": [],
-                        "Edot_t_baseline": [],
-                        "E": [] if "battery" in upgrade_key else [],
-                        "N": [] if "battery" not in upgrade_key else [],
-                        "Ndot_c": [],
+                        "Edot_t_net": [], "Edot_t_baseline": [],
+                        "E": [], "N": [], "Ndot_c": [],
                     },
                     "new_param_vals": param_values,
                 }
 
-                # Process each day's results
-                for date, (
-                    profile,
-                    max_values,
-                ) in month_results.items():
-                    month_days.append(date)
+                # Process each day's results and add profiles to monthly_data
+                for date, (profile, max_values) in month_results.items():
                     if profile and "Edot_t_net" in profile:
                         profile["param_values"] = param_values
                         daily_results[date] = profile
@@ -1347,25 +1267,14 @@ def run_configuration(
                             max_values["Edot_c"],
                         )
 
-                        # Add profiles to monthly_data
                         monthly_data[month_key]["days"].append(date)
-                        monthly_data[month_key]["profiles"]["Edot_t_net"].append(
-                            profile["Edot_t_net"]
-                        )
-                        monthly_data[month_key]["profiles"]["Edot_t_baseline"].append(
-                            profile["Edot_t_baseline"]
-                        )
+                        monthly_data[month_key]["profiles"]["Edot_t_net"].append(profile["Edot_t_net"])
+                        monthly_data[month_key]["profiles"]["Edot_t_baseline"].append(profile["Edot_t_baseline"])
                         if "battery" in upgrade_key:
-                            monthly_data[month_key]["profiles"]["E"].append(
-                                profile["E"]
-                            )
+                            monthly_data[month_key]["profiles"]["E"].append(profile["E"])
                         else:
-                            monthly_data[month_key]["profiles"]["N"].append(
-                                profile["N"]
-                            )
-                            monthly_data[month_key]["profiles"]["Ndot_c"].append(
-                                profile["Ndot_c"]
-                            )
+                            monthly_data[month_key]["profiles"]["N"].append(profile["N"])
+                            monthly_data[month_key]["profiles"]["Ndot_c"].append(profile["Ndot_c"])
 
             # Calculate metrics for this design point
             if design_failed:
@@ -1422,13 +1331,6 @@ def run_configuration(
                 "opex": annual_opex,
             }
 
-            # Calculate NPV
-            annual_savings = {
-                "energy": annual_opex["savings"]["energy"],
-                "demand": annual_opex["savings"]["demand"],
-                "export": annual_opex["savings"]["export"],
-                "h2": annual_opex["savings"]["h2"],
-            }
 
             # Calculate maximum values across all months for capex calculation
             max_ndot_c = max(
@@ -1467,11 +1369,15 @@ def run_configuration(
                     limits=limits,
                 )
             )
-            
-            npv = calculate_itemized_npv(
-                electricity_savings_dict=annual_savings,
-                capex=capex
-            )
+
+            # Calculate NPV
+            annual_savings = {
+                "energy": annual_opex["savings"]["energy"],
+                "demand": annual_opex["savings"]["demand"],
+                "export": annual_opex["savings"]["export"],
+                "h2": annual_opex["savings"]["h2"],
+            }
+            npv = calculate_itemized_npv(annual_savings, capex)
             npv["from capex savings"] = counterfactual_capex
             print(
                 f" {design_key} NPV energy ${npv['by_component']['energy']:,.2f} demand ${npv['by_component']['demand']:,.2f} export ${npv['by_component']['export']:,.2f} H2 ${npv['by_component']['h2']:,.2f} Total ${npv['total']:,.2f} capex {capex}"
