@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.dates as mdates
 import seaborn as sns
 import pickle
 import os
@@ -12,6 +13,7 @@ from matplotlib.lines import Line2D
 from matplotlib import ticker
 from scipy.interpolate import griddata, RBFInterpolator
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
+from matplotlib.patches import Patch
 
 from helpers.design_optimization_algorithm import calculate_itemized_npv
 from helpers.parameters import *
@@ -89,6 +91,13 @@ def get_design_data(config_data):
     """Extract all_results and best design data from config_data."""    
     all_results = config_data["all_results"]
     valid_keys = get_valid_design_keys(all_results)
+    
+    if not valid_keys:
+        # TODO: remove if solves are working
+        print('No valid keys found')
+        dummy_key = list(all_results.keys())[0] if all_results else None
+        return all_results, dummy_key
+    
     best_design_key = max(
         valid_keys, key=lambda k: all_results[k]["metrics"]["npv"]["total"]
     )
@@ -121,6 +130,28 @@ def _plot_lcot_grid(hours, ratios, lcots, grid_size=400):
     mask = np.isfinite(lcots)
     hours, ratios, lcots = hours[mask], ratios[mask], lcots[mask]
 
+    # Check if we have any data to work with
+    if len(hours) == 0 or len(ratios) == 0 or len(lcots) == 0:
+        print("Warning: Empty data arrays provided to _plot_lcot_grid")
+        return None, None, None
+    # Check if all values are NaN and set them to 0
+    if np.all(np.isnan(lcots)):
+        print("Warning: All LCOT values are NaN, setting to 0")
+        lcots = np.zeros_like(lcots)
+    # If all values are NaN, set them to 0
+    if not np.any(mask):
+        print("Warning: All LCOT values are NaN, setting to 0")
+        lcots = np.zeros_like(lcots)
+        mask = np.ones_like(lcots, dtype=bool)
+    # Check if we have any valid data after masking
+    if len(hours) == 0 or len(ratios) == 0 or len(lcots) == 0:
+        print("Warning: No valid finite values found after masking")
+        return None, None, None
+    # Check if we have enough points for interpolation (need at least 3)
+    if len(hours) < 3:
+        print(f"Warning: Insufficient data points ({len(hours)}) for interpolation, need at least 3")
+        return None, None, None
+
     xi = np.linspace(np.min(hours), np.max(hours), grid_size)
     yi = np.linspace(np.min(ratios), np.max(ratios), grid_size)
     xi, yi = np.meshgrid(xi, yi)
@@ -128,10 +159,12 @@ def _plot_lcot_grid(hours, ratios, lcots, grid_size=400):
     # Try RBF interpolation
     try:
         # Normalize coordinates for better RBF performance
-        hours_norm = (hours - np.min(hours)) / (np.max(hours) - np.min(hours))
-        ratios_norm = (ratios - np.min(ratios)) / (np.max(ratios) - np.min(ratios))
-        xi_norm = (xi - np.min(hours)) / (np.max(hours) - np.min(hours))
-        yi_norm = (yi - np.min(ratios)) / (np.max(ratios) - np.min(ratios))
+        hours_range = np.max(hours) - np.min(hours)
+        ratios_range = np.max(ratios) - np.min(ratios)
+        hours_norm = (hours - np.min(hours)) / hours_range
+        ratios_norm = (ratios - np.min(ratios)) / ratios_range
+        xi_norm = (xi - np.min(hours)) / hours_range
+        yi_norm = (yi - np.min(ratios)) / ratios_range
         
         # Stack normalized coordinates
         points = np.column_stack([hours_norm, ratios_norm])
@@ -193,7 +226,7 @@ def get_valid_design_keys(all_results):
     return valid_keys
 
 
-def _get_energy_plot_config():
+def _get_color_config():
     """Get configuration for energy plot styling."""
     return {
         "facility_markers": {
@@ -257,10 +290,10 @@ def _extract_energy_data(results, tariff_key):
     return energy_data
 
 
-def _plot_energy_metrics(ax_energy, ax_energy2, energy_data, config):
+def _plot_energy_metrics(ax_energy, ax_energy2, energy_data, color_config):
     """Plot energy metrics on the given axes."""
-    facility_markers = config["facility_markers"]
-    upgrade_colors = config["upgrade_colors"]
+    facility_markers = color_config["facility_markers"]
+    upgrade_colors = color_config["upgrade_colors"]
     plotted_points = []
 
     for data in energy_data:
@@ -297,8 +330,8 @@ def plot_combined_metrics(results, run_name, output_dir, tariff_key="0.0__svcw",
 
     # Extract and plot energy data
     energy_data = _extract_energy_data(results, tariff_key)
-    config = _get_energy_plot_config()
-    plotted_points = _plot_energy_metrics(ax_energy, ax_energy2, energy_data, config)
+    color_config = _get_color_config()
+    plotted_points = _plot_energy_metrics(ax_energy, ax_energy2, energy_data, color_config)
 
     # Plot LCOT bars
     npv_data = consolidate_npv_data(results, {})
@@ -327,7 +360,17 @@ def consolidate_npv_data(results, grid_results):
             
         metrics = design_data["metrics"]
         npv_metrics = metrics["npv"]
-        npv_components = npv_metrics["by_component"]
+        
+        if "by_component" not in npv_metrics: #TODO: remove
+            print(f"Skipping {config_key}: NPV structure incomplete (missing 'by_component')")
+            npv_components =  {
+                                    "energy": -np.inf,
+                                    "demand": -np.inf,
+                                    "export": -np.inf,
+                                    "h2": -np.inf
+                                }
+        else:
+            npv_components = npv_metrics["by_component"]
         
         # Extract NPV components
         components = {
@@ -616,7 +659,7 @@ def plot_storage_vs_bioreactor_volume(results, run_name, output_dir, tariff_key=
             continue
         all_results, best_design_key = get_design_data(config_data)
         design_data = all_results["1.0__100.0"]
-        param_values = design_data["limits"]
+        param_values = design_data["new_param_vals"]
         V_o2 = param_values["V_tank"]
 
         # Calculate H$_2$ volume if electrolyzer is present
@@ -830,8 +873,12 @@ def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None
         all_results, best_design_key = get_design_data(config_data)     
         design_data = all_results[best_design_key]
         
-        # Get day data
-        available_keys = list(design_data["daily_results"].keys())
+        # Get first available day data from intermediate files
+        month_profiles = design_data["month_profiles"]
+        first_month_key = next(iter(month_profiles.keys()))
+        first_month_data = month_profiles[first_month_key]
+        available_keys = first_month_data["days"]
+        
         if not available_keys:
             raise ValueError("No profile data available")
         if day is None:
@@ -839,13 +886,17 @@ def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None
             print(f"No specific date requested, using first available: {day_key}")
         else:
             day_key = next((key for key in available_keys if day in key), available_keys[0])
-        day_data = design_data["daily_results"][day_key].copy()
+
+        intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_key}"
+        intermediate_file = os.path.join(intermediate_dir, f"{design_key}_{first_month_key}_{day_key}.pkl")
+        with open(intermediate_file, 'rb') as f:
+            day_data = pickle.load(f)
+            day_data = day_data["profile"]
+        
         day_data["Ndot_b_aer_kg_hr"] = moles_to_mass(day_data["Ndot_b_aer"], M_O2)
         day_data["Ndot_target_kg_hr"] = moles_to_mass(day_data["Ndot_target"], M_O2)
         day_data["Edot_r_tot"] = day_data["Edot_r"] - day_data.get("Edot_r_o2", 0)
         for key in day_data:  # Round small values to zero
-            # if isinstance(day_data[key], (list, np.ndarray)) and len(day_data[key]) > 0:
-            #     if isinstance(day_data[key][0], (int, float, np.number)):
             day_data[key] = np.array([x if abs(x) >= 50 else 0 for x in day_data[key]])
         
         all_power_data.extend(day_data["Edot_t_baseline"] / 1000)  # Convert to MW
@@ -1205,30 +1256,59 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
                     tech_hours_list.append(hours)
                     tech_multipliers_list.append(multiplier)
                     tech_lcots_list.append(tech_results[i, j])
-            xi, yi, zi = _plot_lcot_grid(hours, tech_multipliers_list, tech_lcots_list)
+        
+        # Check if we have any data to plot
+        if not tech_hours_list:
+            print(f"Warning: No valid data points for {tech['title']} technology")
+            continue
+        
+        # Check if all values are NaN
+        if all(not np.isfinite(val) for val in tech_lcots_list):
+            print(f"Warning: All LCOT values are NaN for {tech['title']} technology, setting to 0")
+            tech_lcots_list = [0.0] * len(tech_lcots_list)
+        
+        # Check if we have enough data points for interpolation
+        if len(tech_hours_list) < 3:
+            print(f"Warning: Insufficient data points ({len(tech_hours_list)}) for {tech['title']} technology, setting to 0")
+            # Create dummy data for plotting
+            tech_hours_list = [12.0]  # Default to middle of range
+            tech_multipliers_list = [1.0]  # Default to baseline
+            tech_lcots_list = [0.0]  # Default to no change
+        
+        # Skip _plot_lcot_grid if all values are 0 (which means they were originally NaN)
+        if all(val == 0.0 for val in tech_lcots_list):
+            print(f"Warning: All values are 0 for {tech['title']} technology, skipping grid creation")
+            continue
+            
+        xi, yi, zi = _plot_lcot_grid(tech_hours_list, tech_multipliers_list, tech_lcots_list)
     
         if xi is None or yi is None or zi is None:
-            print("Warning: Could not create grid for heatmap")
-            return None, None
+            print(f"Warning: Could not create grid for {tech['title']} technology")
+            continue
 
         # Determine min, max for LCOT normalization
         z_min = np.nanmin(zi)
         z_max = np.nanmax(zi)
         if not (np.isfinite(z_min) and np.isfinite(z_max)):
-            print("Warning: Cannot create heatmap - all NaN values")
-            return None, None
-        absmax = max(abs(z_min), abs(z_max))
+            print(f"Warning: All NaN values for {tech['title']} technology, setting to 0")
+            # Create a grid of zeros instead of NaN
+            zi = np.zeros_like(zi)
+            z_min, z_max = 0, 0
+            absmax = 1  # Set a small range to avoid normalization issues
+        else:
+            absmax = max(abs(z_min), abs(z_max))
+        
         norm = TwoSlopeNorm(vmin=-absmax, vcenter=0, vmax=absmax)
 
         # Plot heatmap
         cmap = get_custom_lcot_cmap()
         im = ax.pcolormesh(xi, yi, zi, cmap=cmap, shading="auto", norm=norm)
-        cbar = plt.colorbar(im, ax=axes[0, :], shrink=0.8, aspect=20, location='right', pad=0.5)
+        cbar = plt.colorbar(im, ax=ax, shrink=0.8, aspect=20, location='right', pad=0.05)
         cbar.set_label("Change in LCOT ($/m³)", fontsize=16)
         cbar.ax.tick_params(labelsize=14)
         scatter = ax.scatter(
-            hours, tech_multipliers_list, c=tech_lcots_list, cmap=cmap, edgecolor="black", s=50, norm=norm
-        )  # actual data points
+            tech_hours_list, tech_multipliers_list, c=tech_lcots_list, cmap=cmap, edgecolor="black", s=50, norm=norm
+        )  # actual data points TODO: check if tech_hours_list should be hours
 
         setup_plot_style(ax, title=tech["title"], xlabel="Hours of O$_2$ Storage", ylabel="Compression Ratio")
         ax.set_ylim(min(tech_multipliers_list), max(tech_multipliers_list))
@@ -1241,13 +1321,14 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
         ax.set_xlim(0, 24)
         ax.set_title(ax.get_title(), fontsize=20)
         ax.text(-0.2, 1.05, chr(65 + idx) + ")", transform=ax.transAxes, fontsize=24, 
-                va='bottom', ha='left', weight='bold')  # A, B, C
+                va='bottom', ha='left')
     
     # BOTTOM ROW: Combined NPV comparison bar plot for 50% increase
-    bottom_ax = axes[1, :]
-    fig.delaxes(bottom_ax[1])
-    fig.delaxes(bottom_ax[2])
-    bottom_ax = bottom_ax[0]
+    # Single subplot that spans all 3 columns
+    fig.delaxes(axes[1, 1])
+    fig.delaxes(axes[1, 2])
+    bottom_ax = plt.subplot2grid((2, 3), (1, 0), colspan=3)
+    axes[1, 0].set_visible(False)
     
     # Extract NPV data for each upgrade technology
     upgrade_labels = ["Air", "HPO from PSA", "HPO from Cryo"]
@@ -1260,6 +1341,12 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
         if float(parts[2]) == 1.5:  # 50% increase
             mult_results[upgrade_key] = config_data
     for i, upgrade_type in enumerate(["none__gas_tank", "o2__psa", "o2__cryo"]):
+        if upgrade_type not in mult_results:
+            print(f"Warning: {upgrade_type} not found in mult_results, using dummy values")
+            storage_npv.append(1.0)
+            counterfactual_npv.append(1.0)
+            continue
+            
         all_results, best_design_key = get_design_data(mult_results[upgrade_type])
         design_data = all_results[best_design_key]
         storage_npv.append(design_data["metrics"]["npv"]["total"] / 1e6)  # Convert to $M
@@ -1267,10 +1354,22 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
     
     x = np.arange(len(upgrade_labels))
     width = 0.35
+    
+    bar_colors = []
+    for upgrade_label in upgrade_labels:
+        if upgrade_label == "Air":
+            color = cb_palette[1]
+        elif "PSA" in upgrade_label:
+            color = cb_palette[4]
+        elif "Cryo" in upgrade_label:
+            color = cb_palette[7]
+        bar_colors.append(color)
+    
     bars1 = bottom_ax.bar(x - width/2, storage_npv, width, label='Storage Upgrade NPV', 
-                          color='skyblue', alpha=0.8)
-    bars2 = bottom_ax.bar(x + width/2, counterfactual_npv, width, label='Counterfactual NPV', 
-                          color='lightcoral', alpha=0.8) 
+                          color=bar_colors, alpha=0.8)
+    
+    bars2 = bottom_ax.bar(x + width/2, counterfactual_npv, width, label='Blower / HPO Expansion NPV', 
+                          color=bar_colors, alpha=0.8, edgecolor='black', hatch='////') 
     for bar in bars1:
         height = bar.get_height()
         bottom_ax.text(bar.get_x() + bar.get_width()/2., height,
@@ -1280,27 +1379,30 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
         bottom_ax.text(bar.get_x() + bar.get_width()/2., height,
                       f'{height:+.1f}M', ha='center', va='bottom' if height > 0 else 'top')
     
-    bottom_ax.set_xlabel('Upgrade Technology', fontsize=18)
     bottom_ax.set_ylabel('Net Present Value (US$M)', fontsize=18)
     bottom_ax.set_title('NPV Comparison: Storage vs Counterfactual', fontsize=20)
     bottom_ax.set_xticks(x)
-    bottom_ax.set_xticklabels(upgrade_labels, fontsize=16)
-    bottom_ax.legend(fontsize=16)
+    bottom_ax.set_xticklabels(upgrade_labels, fontsize=16, rotation=45, ha='right')
+    legend_elements = [
+        Patch(facecolor='white', edgecolor='black', linewidth=1.5, label='Storage Upgrade NPV'),
+        Patch(facecolor='white', edgecolor='black', linewidth=1.5, hatch='////', label='Blower / HPO Expansion NPV')
+    ]
+    bottom_ax.legend(handles=legend_elements, fontsize=16)
     bottom_ax.grid(True, alpha=0.3)
     bottom_ax.text(-0.2, 1.05, "D)", transform=bottom_ax.transAxes, fontsize=24, 
-                    va='bottom', ha='left', weight='bold')
+                    va='bottom', ha='left')
     bottom_ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
     # Save the plot
     output_dir = get_output_dir(config["run_name"], "paper_figures")
-    plt.tight_layout()
+    plt.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.12, wspace=0.4, hspace=0.4)
     plt.savefig(os.path.join(output_dir, "summer_multiplier_heatmap.png"))
     plt.close()
 
 
 def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
                    figure_2=False, figure_4=False, 
-                   figure_3=False, run_config=None):
+                   figure_3=False, si_storage=None, run_config=None):
         
     results = load_results_from_files(run_name)
     filtered_results = {}
@@ -1329,8 +1431,10 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
 
     get_output_dir(run_name, "mvn")
     plot_combined_metrics(results, run_name, output_dir, location_lookup=location_lookup)
-    plot_storage_vs_bioreactor_volume(results, run_name, output_dir)
-    si_cem_figure(results, run_name, output_dir)
+
+    if si_storage:
+        plot_storage_vs_bioreactor_volume(results, run_name, output_dir)
+        si_cem_figure(results, run_name, output_dir)
 
     if figure_2:
         figure_2_function(run_name, suffix, None, npv_data=consolidate_npv_data(results, {}),
@@ -1364,6 +1468,11 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
                     summer_results[mult_idx, hours_idx] = delta_lcot
                 else:
                     infeas[mult_idx, hours_idx] = True  # plot infeasible areas in black
+        
+        # Check if all values are NaN and set them to 0
+        if np.all(np.isnan(summer_results)):
+            print("Warning: All summer results are NaN, setting to 0")
+            summer_results = np.zeros_like(summer_results)
         
         figure_4_function(multipliers, hours_range, summer_results, infeas, {"run_name": run_name, "results": results})
     

@@ -2,8 +2,10 @@ import pandas as pd
 import pickle
 import os
 import json
+import copy
 from pathlib import Path
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from helpers.parameters import cb_palette
 
 from helpers.compressor_power import *
@@ -151,8 +153,13 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
     ]
     
     print(f"Scaling {len(flow_power_columns)} flow/power columns: {flow_power_columns}")
-    scaled_data = final_data.copy()
+    scaled_data = copy.deepcopy(final_data)
     scaled_data[flow_power_columns] *= scale_factor
+    for col in scaled_data.columns: # FINAL removal of NaNs
+        if col != 'DateTime':
+            if scaled_data[col].isna().any():
+                print(f"Cleaning {col}: {scaled_data[col].isna().sum()} NaNs found")
+                scaled_data[col] = scaled_data[col].ffill().bfill()
     scaled_data.to_csv(f"{output_dir}/scaled_data.csv", index=False)
 
     # Prepare data for plotting by adding time-based columns
@@ -166,10 +173,12 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
                 data_copy = data_copy.set_index("DateTime")
             else:
                 data_copy.index = pd.to_datetime(data_copy.index)
+                
         data_copy["hour"] = data_copy.index.hour
         data_copy["month"] = data_copy.index.month
         data_copy["year"] = data_copy.index.year
         data_copy["date"] = data_copy.index.date
+        data_copy["15_minute_key"] = data_copy.index.hour * 4 + data_copy.index.minute // 15
         
         return data_copy
     
@@ -187,7 +196,9 @@ def clean_data_with_flows_prep(ingest_gas, network_filename, parameter_filename,
                      final_for_plotting, 
                      scaled_for_plotting,
                      run_name, ingest_gas, scale_factor)
-
+    
+    create_flow_timeseries_plot(final_for_plotting, run_name, ingest_gas)
+    
     return scaled_data, final_data
 
 
@@ -231,7 +242,7 @@ def get_export_profiles_standardized(data, ingest_gas):
             "VirtualDemand_RestOfFacilityPower": data["VirtualDemand_RestOfFacilityPower"].values,
         }
 
-        print(f"  O2Plant_AerationBasin_Air_Flow: {export_profiles['Blower_AerationBasin_Air_Flow'].mean():.2f}")
+        # print(f"  O2Plant_AerationBasin_Air_Flow: {export_profiles['Blower_AerationBasin_Air_Flow'].mean():.2f}")
     
     return export_profiles
 
@@ -386,11 +397,19 @@ def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data,
                 y_min = min(all_mean_values)
                 y_max = max(all_mean_values)
                 if ingest_gas == 'air' and scale_factor == 1.0:
-                    axs[i].set_ylim(0000, 2000)  # for 13.5 MGD
+                    axs[i].set_ylim(-1000, 2000)  # for 13.5 MGD
                 elif ingest_gas == 'ο2' and scale_factor == 1.0:
                     axs[i].set_ylim(-4000, 8000)  # for 80 MGD
                 else:
                     axs[i].set_ylim(-1000, 5000)  # for 40 MGD
+            
+            if ingest_gas == 'o2':
+                aeration_power_col = "O2PlantCompressor_Electricity_OutFlow"
+            else:
+                aeration_power_col = "AerationBasin_TotalAerationPower"
+            avg_aeration_power = month_data[aeration_power_col].mean()
+            avg_virtual_demand = month_data["VirtualDemand_Electricity_InFlow"].mean()
+            fraction = avg_aeration_power / avg_virtual_demand if avg_virtual_demand != 0 else 0
             
             # Set subplot properties
             axs[i].set_title(f"{month_names[month]} {year}", fontsize=20)
@@ -399,6 +418,9 @@ def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data,
             axs[i].axhline(0, color='k', alpha=0.3)
             axs[i].set_xlim(0, 24)
             axs[i].tick_params(axis='both', which='major', labelsize=12)
+            axs[i].text(0.02, 0.98, f'Avg Aeration/Virtual Demand: {fraction:.2f}', 
+                       transform=axs[i].transAxes, fontsize=14, 
+                       verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
             
             # Show y-axis tick labels on all subplots
             axs[i].tick_params(axis='y', which='major', labelsize=12)
@@ -418,6 +440,38 @@ def plot_data_stages(processed_data, cleaned_data, imputed_data, final_data,
     plt.savefig(f"{outdir}/{run_name}_{stage_name}_daily_profiles.png", dpi=200)
     plt.close()
 
+def create_flow_timeseries_plot(data, run_name, ingest_gas):
+    if ingest_gas == 'air':
+        flow_key = "Blower_AerationBasin_Air_Flow"
+    elif ingest_gas == 'o2':
+        flow_key = "O2Plant_AerationBasin_Oxygen_Flow"
+    
+    flow_data = data[flow_key].dropna()
+    flow_indices = data[flow_key].notna()
+    timestamps = pd.to_datetime(data.loc[flow_indices, 'date'].astype(str) + ' ' + 
+                                data.loc[flow_indices, 'hour'].astype(str).str.zfill(2) + ':' + 
+                                ((data.loc[flow_indices, '15_minute_key'] % 4) * 15).astype(str).str.zfill(2) + ':00')
+    
+    fig, ax = plt.subplots(figsize=(16, 8))
+    ax.scatter(timestamps, flow_data, alpha=0.6, s=1, color='blue', label='Flow Data')    
+    percentiles = [50, 75, 95, 99]
+    percentile_values = np.percentile(flow_data, percentiles)
+    colors = ['green', 'orange', 'red', 'darkred']
+    
+    for i, (pct, value, color) in enumerate(zip(percentiles, percentile_values, colors)):
+        ax.axhline(y=value, color=color, linestyle='--', linewidth=2, 
+                   label=f'{pct}th Percentile: {value:.1f}')
+    ax.set_xlabel('Date', fontsize=16)
+    ax.set_ylabel(flow_key, fontsize=16)
+    ax.grid(False)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    plt.tight_layout()
+    outdir = f"aeration_flexibility/output_plots/{run_name}/paper_figures"
+    plt.savefig(f"{outdir}/flow_timeseries_{ingest_gas}.png", dpi=300, bbox_inches='tight')
+    plt.close()
 
 # Configuration for different gas types
 gas_configs = {
@@ -477,7 +531,6 @@ def ingest_data(run_name="run_name", ingest_gas='air', scale_factor=None, shorte
     
     # Create day profiles for complete days
     valid_dates = sorted(set(d for d in scaled_data.index.date if pd.notnull(d)))
-    print(scaled_data.columns)
     day_profiles = {
         date.strftime("%Y-%m-%d"): {
             "profile": get_export_profiles_standardized(

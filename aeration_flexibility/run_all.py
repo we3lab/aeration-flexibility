@@ -23,7 +23,7 @@ def extract_config_values(config):
     else:
         upgrade_keys = config["upgrade_keys"]
     
-    return {
+    config_dict = {
         "base_run_name": config["run_name_from_file"],  # Use filename instead of config field
         "summer_config_template": config["summer_config_template"],
         "upgrade_keys": upgrade_keys,
@@ -31,18 +31,13 @@ def extract_config_values(config):
         "shorten_months_run": config["data_ingestion"]["shorten_months_run"],
         "scale_factor": config["data_ingestion"]["scale_factor"],
         "ingest_gas": config["data_ingestion"]["ingest_gas"],
-        "o2_range": config["design_space"]["o2_range"],
-        "comp_ratio_range": config["design_space"]["comp_ratio_range"],
-        "designs_per_run": config["design_space"]["designs_per_run"],
-        "max_iterations": config["design_space"]["max_iterations"],
-        "n_jobs": config["design_space"]["n_jobs"],
-        "run_ingest_data": config["script_settings"]["run_ingest_data"],
-        "run_solve_optimization": config["script_settings"]["run_solve_optimization"],
-        "run_plotting": config["script_settings"]["run_plotting"],
-        "figure_2": config["script_settings"]["figure_2"],
-        "figure_4": config["script_settings"]["figure_4"],
-        "figure_3": config["script_settings"]["figure_3"],
     }
+    for key in config["script_settings"]:
+        config_dict[key] = config["script_settings"][key]
+    for key in config["design_space"]:
+        config_dict[key] = config["design_space"][key]
+        
+    return config_dict
 
 
 def build_run_configs(summer_config_template, upgrade_keys, tariff_keys_to_run, config=None):
@@ -151,6 +146,7 @@ def main():
             figure_2=config_values["figure_2"],
             figure_4=config_values["figure_4"],
             figure_3=config_values["figure_3"],
+            si_storage=config_values["si_storage"],
             run_config=config
         )
 

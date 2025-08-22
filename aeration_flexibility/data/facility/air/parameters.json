@@ -178,7 +178,9 @@
                "method": "interpolate",
                "method_args": [],
                "method_kwargs": {
-                  "method": "linear"
+                  "method": "linear",
+                  "limit_direction": "both",
+                  "limit": 10000
                },
                "model_trainer_args": [],
                "model_trainer_kwargs": {}
@@ -667,8 +669,11 @@
                "detotalize": false
             },
             "cleaning": {
-               "clean_tukey": false,
-               "outlier_cutoff": [],
+               "clean_tukey": true,
+               "outlier_cutoff": [
+                  30000,
+                  210000
+               ],
                "outlier_chg_cutoff": [],
                "custom_clean_bool": [],
                "custom_clean_function": {
@@ -681,7 +686,8 @@
                "method": "interpolate",
                "method_args": [],
                "method_kwargs": {
-                  "method": "linear"
+                  "method": "nearest",
+                  "limit_direction": "both"
                },
                "model_trainer_args": [],
                "model_trainer_kwargs": {}
@@ -1008,7 +1014,8 @@
                "method": "interpolate",
                "method_args": [],
                "method_kwargs": {
-                  "method": "linear"
+                  "method": "nearest",
+                  "limit_direction": "both"
                },
                "model_trainer_args": [],
                "model_trainer_kwargs": {}

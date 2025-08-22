@@ -297,7 +297,7 @@ def compressor_cost(power: float) -> float:
     return convert_to_2025_dollars(1880 * power_hp**0.671, 2023)  # TODO: check year
 
 
-def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, limits):
+def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, new_param_vals):
     """Calculate capital expenditure for a given configuration.
 
     Args:
@@ -305,7 +305,7 @@ def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, l
         storage_type: Type of storage ('battery', 'gas_tank', etc.)
         new_o2_supply_tech: Oxygen supply technology ('psa', 'cryo', etc.)
         base_wwtp_key: Base WWTP configuration key
-        limits: System limits dictionary
+        new_param_vals: System new_param_vals dictionary
 
     Returns:
         Tuple of (total capex, tank metrics, capex components, counterfactual capex)
@@ -366,7 +366,7 @@ def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, l
     # Counterfactual capex (cost of additional O2 capacity without storage)
     counterfactual_capex = 0
     o2_supply_tech = base_wwtp_key.split("__")[0]
-    additional_o2_capacity = limits["Ndot_target_max"] - limits["Ndot_b_max"]
+    additional_o2_capacity = new_param_vals["Ndot_target_max"] - new_param_vals["Ndot_b_max"]
     if o2_supply_tech == "psa":
         counterfactual_capex = psa_unit_cost(additional_o2_capacity)
     elif o2_supply_tech == "cryo":

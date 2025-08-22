@@ -88,7 +88,7 @@ def extract_day_results_from_n_day_profile(profile, day_idx, total_days_in_group
     
     return day_profile
 
-def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits, 
+def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals, 
                   baseline_val_dict, charge_dict_month, prev_demand_dict=None,
                   initial_storage_state=None, horizon_days=3):
     """
@@ -100,7 +100,7 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
         base_wwtp_key: Base WWTP configuration key
         upgrade_key: Upgrade configuration key
         tariff_key: Tariff key
-        limits: System limits
+        new_param_vals: System new_param_vals
         baseline_val_dict: Dictionary of baseline values for each day
         charge_dict_month: Monthly charge dictionary
         prev_demand_dict: Previous demand dictionary
@@ -125,10 +125,10 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
     problem_start = time.time()
     problem = O2Problem(
         single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
-        design_key=design_key, limits=limits, date=f"{group_days[0]}_to_{group_days[-1]}", 
+        design_key=design_key, date=f"{group_days[0]}_to_{group_days[-1]}", 
         initial_storage_state=initial_storage_state, data_wwtp='svcw', horizon_days=horizon_days
     )
-    problem.get_new_param_vals()
+    problem.new_param_vals = new_param_vals
 
     # Check if concatenated data has correct length
     if len(concatenated_baseline_vals["Ndot_target"]) != len(group_days) * 96:
@@ -182,30 +182,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, lim
         return profiles_dict, new_param_vals, max_values_dict, initial_storage_state_next_run
 
     return None, None, None, None
-
-def get_new_param_vals_function(date, design_key, base_wwtp_key, upgrade_key, tariff_key, limits):
-    # Create problem instance just to get param vals from the first valid day
-    problem = O2Problem(
-        single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
-        design_key=design_key, limits=limits, date=date, data_wwtp='svcw',
-    )
-    problem.get_new_param_vals()
-    param_vals = problem.new_param_vals
-    del problem  # clean up memory
-    return param_vals
-
-def find_valid_replacement(date, valid_days):
-    """
-    Helper to find valid replacement using predefined order from tariffs.py.
-    Args:
-        day (str): Full date string in format 'YYYY-MM-DD'
-        valid_days (list): List of full date strings in format 'YYYY-MM-DD'
-    """
-    replacement_days = get_replacement_days(date)
-    for replacement_day in replacement_days:
-        if replacement_day in valid_days:
-            return replacement_day
-    return None  # Should never happen if valid_days is non-empty and REPLACEMENT_DAYS is correct
 
 
 def extract_final_storage_state(profile):
@@ -273,14 +249,14 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
 
     Args:
         design_point_data: Tuple of (Hours_of_O2, compression_ratio, month_key_and_days,
-                                   base_wwtp_key, upgrade_key, tariff_key, limits,
-                                   baseline_val_dict, param_values)
+                                   base_wwtp_key, upgrade_key, tariff_key, new_param_vals,
+                                   baseline_val_dict, new_param_vals)
         run_name: Name of the run for saving intermediate results
         intermediate_filepaths: Dictionary of file paths to already-solved intermediate results
         horizon_days: Number of days to process in each horizon (default 3)
     """
     (design_key, month_key, month_days, base_wwtp_key, upgrade_key,
-     tariff_key, limits, baseline_val_dict, param_values) = design_point_data    
+     tariff_key, new_param_vals, baseline_val_dict, new_param_vals) = design_point_data    
 
     # Process the month using N-day optimization with 1-day overlap
     month_start_time = time.time()
@@ -312,7 +288,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     tariff_data = get_tariff_data()
     if tariff_key not in tariff_data:
         print(f"Warning: Tariff key {tariff_key} not found in tariff data")
-        return (design_key, month_key, [], param_values, {"baseline": [], "optimized": []}, 
+        return (design_key, month_key, [], new_param_vals, {"baseline": [], "optimized": []}, 
                 False, "tariff_not_found")
     
     charge_dict_month = get_charge_dict_for_month(tariff_data[tariff_key], int(year), int(month))
@@ -357,7 +333,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             initial_storage_state = None
             if i == 0:
                 if float(summer_multiplier) > 1.0: # Give half storage to help with first day feasibility
-                    initial_storage_state = {'N': param_values.get('N_max',0)/2, 'E': 0}
+                    initial_storage_state = {'N': new_param_vals.get('N_max',0)/2, 'E': 0}
                 else:  # O2Problem will use minimum values
                     pass
             elif i > 0:
@@ -371,7 +347,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             
             # Process the N-day group
             profiles_dict, new_param_vals, max_values_dict, final_storage_state_prev_run = process_n_days(
-                group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, limits,
+                group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals,
                 baseline_val_dict, charge_dict_month, prev_demand_dict=prev_demand_dict,
                 initial_storage_state=initial_storage_state, horizon_days=horizon_days
             )
@@ -413,7 +389,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                         continue
                     dummy_data = {
                         "profile": None,
-                        "new_param_vals": param_values,
+                        "new_param_vals": new_param_vals,
                         "max_values": {"Ndot_c": 0, "Edot_c": 0},
                         "prev_demand_dict": prev_demand_dict,
                         "initial_storage_state": initial_storage_state,  # Preserve the storage state from previous horizon
@@ -457,7 +433,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
         design_key,
         month_key,
         month_results,
-        param_values,
+        new_param_vals,
         is_feasible,
         failure_reason,
     )
@@ -494,6 +470,9 @@ def sample_from_multivariate_normal(
         exp_weight: Exponential weighting factor for elite selection
         min_variance: Minimum variance for numerical stability
     """
+    # Local random state for consistent sampling from seed
+    local_rng = np.random.RandomState(RANDOM_SEED)
+    
     # Extract valid points and NPVs
     points, npvs = [], []
     is_univariate = "battery" in upgrade_key or "liquid" in upgrade_key
@@ -553,31 +532,31 @@ def sample_from_multivariate_normal(
             break
             
         # Exploration vs exploitation
-        if np.random.random() < exploration_prob:
+        if local_rng.random() < exploration_prob:
             # Uniform sampling
             if is_univariate:
-                sample = np.random.uniform(o2_range[0], o2_range[1])
+                sample = local_rng.uniform(o2_range[0], o2_range[1])
                 candidate = (round(sample, 2), 100.0)
             else:
-                h = np.random.uniform(o2_range[0], o2_range[1])
-                r = np.random.uniform(comp_ratio_range[0], comp_ratio_range[1])
+                h = local_rng.uniform(o2_range[0], o2_range[1])
+                r = local_rng.uniform(comp_ratio_range[0], comp_ratio_range[1])
                 candidate = (round(h, 2), round(r, 1))
         else:
             # Sample from fitted distribution
             if is_univariate:
-                sample = np.random.normal(mu_sigma["mu"], mu_sigma["sigma"])
+                sample = local_rng.normal(mu_sigma["mu"], mu_sigma["sigma"])
                 sample = np.clip(sample, o2_range[0], o2_range[1])
                 candidate = (round(sample, 2), 100.0)
             else:
                 try:
-                    sample = np.random.multivariate_normal(mu_sigma["mu"], mu_sigma["sigma"])
+                    sample = local_rng.multivariate_normal(mu_sigma["mu"], mu_sigma["sigma"])
                     sample[0] = np.clip(sample[0], o2_range[0], o2_range[1])
                     sample[1] = np.clip(sample[1], comp_ratio_range[0], comp_ratio_range[1])
                     candidate = (round(sample[0], 2), round(sample[1], 1))
                 except np.linalg.LinAlgError:
                     # Fallback to uniform sampling
-                    h = np.random.uniform(o2_range[0], o2_range[1])
-                    r = np.random.uniform(comp_ratio_range[0], comp_ratio_range[1])
+                    h = local_rng.uniform(o2_range[0], o2_range[1])
+                    r = local_rng.uniform(comp_ratio_range[0], comp_ratio_range[1])
                     candidate = (round(h, 2), round(r, 1))
         
         # Only add if not already in all_designs and not already in new_points
@@ -588,7 +567,7 @@ def sample_from_multivariate_normal(
     return list(new_points), mu_sigma
 
 
-def calculate_capacity_factor(month_data, upgrade_key):
+def calculate_capacity_factor(month_data, upgrade_key, new_param_vals):
     """Calculate capacity factor based on storage type."""
     if "battery" in upgrade_key:
         storage_str = "E"
@@ -597,9 +576,8 @@ def calculate_capacity_factor(month_data, upgrade_key):
 
     if storage_str in month_data["profiles"] and month_data["profiles"][storage_str]:
         month_storage_profile = np.concatenate(month_data["profiles"][storage_str])
-        month_storage_max = month_data["new_param_vals"][f"{storage_str}_max"]
+        month_storage_max = new_param_vals[f"{storage_str}_max"]
         return np.max(month_storage_profile) / month_storage_max
-
     return 0.0  # if no tank
 
 
@@ -615,10 +593,11 @@ def calculate_h2_metrics(month_data):
     return {"H2": h2_moles, "h2_value": h2_value}
 
 
-def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
+def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_vals):
     """Calculate monthly metrics including costs and energy metrics."""
     if not month_data["days"]:
         return {}, {}, {}
+    
     # Get year, month explicitly from the first day
     year, month = map(int, month_data["days"][0].split("-")[:2])
     
@@ -634,63 +613,12 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
     if not month_data["profiles"]["Edot_t_net"]:
         return {}, {}, {}
 
-    # Get all days in the month
-    all_days = get_all_days_in_month(year, month)
-    valid_days = [
-        d
-        for d in month_data["days"]
-        if len(month_data["profiles"]["Edot_t_net"]) > month_data["days"].index(d)
-    ]
-
-    # Handle missing days and replacements
-    replacements = {}
-    for missing_date in set(all_days) - set(valid_days):
-        replacement_day = find_valid_replacement(missing_date, valid_days)
-        if replacement_day:
-            print(f"Using {replacement_day} as replacement for {missing_date}")
-            # Track the replacement
-            replacements[missing_date] = replacement_day
-            # Add the replacement day's profiles to the monthly data
-            month_data["profiles"]["Edot_t_net"].append(
-                month_data["profiles"]["Edot_t_net"][valid_days.index(replacement_day)]
-            )
-            month_data["profiles"]["Edot_t_baseline"].append(
-                month_data["profiles"]["Edot_t_baseline"][
-                    valid_days.index(replacement_day)
-                ]
-            )
-            if "battery" in upgrade_key:
-                month_data["profiles"]["E"].append(
-                    month_data["profiles"]["E"][valid_days.index(replacement_day)]
-                )
-            else:
-                month_data["profiles"]["N"].append(
-                    month_data["profiles"]["N"][valid_days.index(replacement_day)]
-                )
-                month_data["profiles"]["Ndot_c"].append(
-                    month_data["profiles"]["Ndot_c"][valid_days.index(replacement_day)]
-                )
-            month_data["days"].append(missing_date)
-
-    # Sort days and profiles to ensure correct order
-    sorted_indices = np.argsort(month_data["days"])
-    for key in month_data["profiles"]:
-        if len(month_data["profiles"][key]) == len(
-            sorted_indices
-        ):  # TODO: fix for missing days
-            month_data["profiles"][key] = [
-                month_data["profiles"][key][i] for i in sorted_indices
-            ]
-    month_data["days"] = [month_data["days"][i] for i in sorted_indices]
-
     # Concatenate profiles from all days
     profiles = np.concatenate(month_data["profiles"]["Edot_t_net"])
     baseline_profiles = np.concatenate(month_data["profiles"]["Edot_t_baseline"])
 
     # Initialize results
-    opex = {
-        "new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0},
-    }
+    opex = {"new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0}}
 
     new_itemized_costs, _ = costs.calculate_itemized_cost(
         charge_dict,
@@ -716,7 +644,7 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
 
     # Initialize metrics dictionary
     monthly_metrics = {
-        "capacity_factor": calculate_capacity_factor(month_data, upgrade_key),
+        "capacity_factor": calculate_capacity_factor(month_data, upgrade_key, new_param_vals),
         "month_rte": metrics.roundtrip_efficiency(baseline_profiles, profiles),
         "energy_capacity": metrics.energy_capacity(
             baseline_profiles,
@@ -732,18 +660,7 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
             pc_type="average",
             relative=True,
         ),
-        "month_profiles": {
-            "baseline": baseline_profiles,
-            "optimized": profiles,
-        },
     }
-
-    # Calculate max_Edot_c if available
-    if "Edot_c" in month_data["profiles"] and month_data["profiles"]["Edot_c"]:
-        Edot_c_profiles = np.concatenate(month_data["profiles"]["Edot_c"])
-        monthly_metrics["max_Edot_c"] = np.max(Edot_c_profiles)
-    else:
-        monthly_metrics["max_Edot_c"] = 0.0
 
     # Add H2 metrics if applicable
     if "elec" in upgrade_key:
@@ -752,7 +669,6 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key):
         opex["new"]["h2"] = -h2_metrics["h2_value"]
         opex["savings"]["h2"] = h2_metrics["h2_value"]
     return {
-        "replacements": replacements,
         "monthly_metrics": monthly_metrics,
         "opex": opex
     }
@@ -765,7 +681,7 @@ def calculate_itemized_npv(electricity_savings_dict, capex, years=10):
             "total": np.nan,
         }
 
-    npv_dict = {"from capex": capex, "total": capex, "by_component": {}}
+    npv_dict = {"from capex": -capex, "total": -capex, "by_component": {}}
     for component, savings in electricity_savings_dict.items():
         component_value = metrics.net_present_value(
             capital_cost=0,
@@ -787,11 +703,7 @@ def get_max_dict_from_profile(profile, demand_charge_info_dict):
     if profile is None:  # Failed day
         return None
     
-    if "Edot_t_net" in profile:
-        power_profile = profile["Edot_t_net"]
-    else:
-        return None
-    
+    power_profile = profile["Edot_t_net"]
     for charge_key, charge in demand_charge_info_dict.items():
         if "demand" not in charge_key:
             continue
@@ -839,27 +751,76 @@ def get_demand_charge_info_dict(tariff_key, month, year):
     for charge_key in charge_dict.keys():
         if "demand" not in str(charge_key):
             continue
-        # Parse period from the key (e.g., 'electric_demand_peak-summer_20220701_20220801_0')
+        
+        # Parse period from the charge key (e.g., 'electric_demand_peak-summer_20220701_20220801_0')
         parts = str(charge_key).split("_")
         charge_type = parts[0] + "_" + parts[1]  # e.g., 'electric_demand'
         period = parts[2]  # e.g., 'peak-summer'
-        # Rebuild the key using the correct year/month
-        key = f"{charge_type}_{period}_{start_date.replace('-', '')}_{end_date_last_day.replace('-', '')}_0"
-        # Find the matching row in the tariff_df
+        
         match = tariff_df[(tariff_df["type"] == "demand") & (tariff_df["period"] == period)]
         if match.empty:
             continue
-        charge_rate = match.iloc[0]["charge (metric)"]
-        hour_start = match.iloc[0]["hour_start"]
-        hour_end = match.iloc[0]["hour_end"]
+
+        key = f"{charge_type}_{period}_{start_date.replace('-', '')}_{end_date_last_day.replace('-', '')}_0"
         demand_charge_info_dict[key] = {
-            "charge_rate": charge_rate,
-            "hour_start": hour_start,
-            "hour_end": hour_end,
+            "charge_rate": match.iloc[0]["charge (metric)"],
+            "hour_start": match.iloc[0]["hour_start"],
+            "hour_end": match.iloc[0]["hour_end"],
         }
     return demand_charge_info_dict
 
+def get_baseline_param_vals(Ndot_target, Edot_rem, base_wwtp_key):
+    """
+    Generate parameter values for a given scenario and o2_tech.
 
+    Args:
+        Ndot_target: Target oxygen flow rate
+        Edot_rem: Remaining energy demand
+        base_wwtp_key: Key specifying gas type and technology
+
+    Returns:
+        dict: A dictionary of parameter values
+    """
+    Ndot_target = copy.deepcopy(Ndot_target)
+
+    P_b = P_AER + P_ATM
+    gas, o2_tech_base, summer_multiplier, summer_smoothing = split_key(base_wwtp_key)
+    P_init_base = P_init_map[o2_tech_base]
+    ei_o2_base = ei_o2_map[o2_tech_base]
+    ei_evap = ei_evap_kwh if o2_tech_base == "cryo" else 0
+    Edot_b_comp_coeff = compressor_power_linear_coeff(P_init_base, P_b, rec=False)
+    # print(Edot_b_comp_coeff)
+    Edot_b_comp_baseline = Ndot_target / frac_o2_map[gas] * Edot_b_comp_coeff
+    Edot_b_gen_baseline = Ndot_target * ei_o2_base # TODO: debug for EBMUD
+    Edot_b_baseline = Edot_b_comp_baseline + Edot_b_gen_baseline
+    print(f'Ndot_target mean: {Ndot_target.mean()}')
+    print(f'Edot_b_baseline mean, max and min {Edot_b_baseline.mean()})')
+    print(f'Edot_rem mean, max and min {Edot_rem.mean()})')
+    return {
+        "Ndot_target": Ndot_target,
+        "Edot_rem": Edot_rem,
+        "Edot_t_baseline": Edot_b_baseline + Edot_rem,
+        "Edot_b_baseline": Edot_b_baseline,
+        "P_init_base": P_init_base,
+        "ei_o2_base": ei_o2_base,
+        "ei_evap": ei_evap,
+        "P_b": P_b,
+        "Edot_b_comp_coeff": Edot_b_comp_coeff
+    }
+
+
+def get_remaining_new_param_vals_function(design_key, base_wwtp_key, upgrade_key, tariff_key, annual_param_limits):
+    # Create problem instance just to get param vals once per design
+    problem = O2Problem(
+        single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
+        design_key=design_key, date="dummy", data_wwtp='svcw',
+    )
+    problem.get_remaining_new_param_vals(annual_param_limits)
+    param_vals = problem.new_param_vals
+    del problem  # clean up memory
+    return param_vals
+    
+    
 def run_configuration(
     config,
     run_name,
@@ -894,6 +855,11 @@ def run_configuration(
     tariff_key = config["tariff_key"]
     suffix = get_summer_key(config['summer_config']["multiplier"],config['summer_config']["smoothing"])
     config_name = get_config_name(base_wwtp_key, config['upgrade_key'], config['tariff_key'], suffix)
+
+    if "battery" in upgrade_key:
+        keys_to_append = ["Edot_t_baseline", "Edot_t_net", "E"]
+    else:
+        keys_to_append = ["Edot_t_baseline", "Edot_t_net", "N", "Ndot_c"]
 
     if skip_already_run and os.path.exists(f"aeration_flexibility/output_data/{run_name}/{config_name}.pkl"):
         print(f"Skipping {config_name}")
@@ -964,26 +930,29 @@ def run_configuration(
         # if int(summer_smoothing) > 0:
         #     Ndot_target_day = np.convolve(Ndot_target_day, np.ones(int(summer_smoothing)) / int(summer_smoothing), mode="same")
 
+        # predefine baseline param vals in order to calculate system annual_param_limits
         baseline_val_dict[date] = get_baseline_param_vals(
             Ndot_target=Ndot_target_day,
             Edot_rem=day_data["profile"]["VirtualDemand_RestOfFacilityPower"],
             base_wwtp_key=base_wwtp_key
         )
 
-    # Calculate system limits
+    # Calculate system annual_param_limits
+    print('system limits')
+    print(baseline_val_dict['2022-07-05'].keys())
+    print(baseline_val_dict['2022-07-05']['Edot_t_baseline'])
     Ndot_target_year = np.array([val["Ndot_target"] for val in baseline_val_dict.values()])
-    Edot_t_max = max(0, np.max([val["Edot_t_baseline"] for val in baseline_val_dict.values()]))
+    Edot_t_max = np.max(np.concatenate([val["Edot_t_baseline"] for val in baseline_val_dict.values()]))
+    print(f'Edot_t_max: {Edot_t_max}')
     if float(summer_multiplier) > 1.0:
-        Ndot_b_max = (
-            np.percentile(Ndot_target_year, 99) / float(summer_multiplier)
-        )
+        Ndot_b_max = np.max(Ndot_target_year) / float(summer_multiplier)
         Edot_c_max = Edot_t_max / float(summer_multiplier)
         print(f"setting Ndot_b_max to {Ndot_b_max} (out of annual max {np.max(Ndot_target_year)} for summer_multiplier {summer_multiplier}")
     else:
         Ndot_b_max = np.max(Ndot_target_year)
         Edot_c_max = Edot_t_max
     
-    limits = {
+    annual_param_limits = {
         "Ndot_target_min": np.min(Ndot_target_year),
         "Ndot_target_max": np.max(Ndot_target_year),
         "Ndot_target_mean": np.mean(Ndot_target_year),
@@ -1125,12 +1094,13 @@ def run_configuration(
         job_queue = []
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
-            param_values = get_new_param_vals_function(next(iter(day_profiles)), design_key, base_wwtp_key,
-                                              upgrade_key, tariff_key, limits)
+            new_param_vals = get_remaining_new_param_vals_function(
+                design_key, base_wwtp_key, upgrade_key, tariff_key, annual_param_limits
+                )
 
             for month_key, month_days in month_to_days.items():
                 job_queue.append((design_key, month_key, month_days, base_wwtp_key, upgrade_key, tariff_key,
-                                  limits, baseline_val_dict, param_values))
+                                  None, baseline_val_dict, new_param_vals))
 
         # Create parent directories for intermediate results
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
@@ -1172,11 +1142,10 @@ def run_configuration(
                         result = async_result.get()
                         results.append(result)
                         
-                        if result and len(result) >= 6:  # Check we have all fields
-                            design_key_from_result = result[0]
+                        if result and len(result) >= 6:
                             month_key = result[1]
                             month_results = result[2]  # month_results
-                            param_values = result[3]
+                            new_param_vals = result[3]
                             is_feasible = result[4]  # is_feasible
                             failure_reason = result[5]  # failure_reason
 
@@ -1210,7 +1179,6 @@ def run_configuration(
                 continue
 
             # Aggregate results for this design point
-            daily_results = {}
             monthly_data = {}
             monthly_max_values = {}
             month_failures = {}
@@ -1220,7 +1188,7 @@ def run_configuration(
                 design_key_from_result,
                 month_key,
                 month_results,
-                param_values,
+                new_param_vals,
                 is_feasible,
                 failure_reason,
             ) in design_results:
@@ -1230,12 +1198,15 @@ def run_configuration(
                     all_results[design_key] = {
                         "design_key": design_key,
                         "metrics": {
-                            "npv": {"total": -np.inf},
+                            "npv": {
+                                "total": -np.inf,
+                                "by_component": {"energy": -np.inf, "demand": -np.inf, "export": -np.inf, "h2": -np.inf
+                                }
+                            },
                             "capex": np.inf,
                             "tank_metrics": None,
                         },
-                        "limits": limits,
-                        "daily_results": {},
+                        "new_param_vals": new_param_vals,
                         "infeasibility_reason": failure_reason,
                     }
                     design_failed = True
@@ -1243,40 +1214,50 @@ def run_configuration(
                     
                 monthly_max_values[month_key] = {"Ndot_c": 0, "Edot_c": 0}
 
-                # Initialize monthly_data structure for this month
+                # Initialize monthly_data structure for this month with only key profiles
                 monthly_data[month_key] = {
                     "days": [],
                     "profiles": {
                         "Edot_t_net": [], "Edot_t_baseline": [],
                         "E": [], "N": [], "Ndot_c": [],
                     },
-                    "new_param_vals": param_values,
                 }
 
-                # Process each day's results and add profiles to monthly_data
+                # Process each day's results and add only key profiles to monthly_data
                 for date, (profile, max_values) in month_results.items():
                     if profile and "Edot_t_net" in profile:
-                        profile["param_values"] = param_values
-                        daily_results[date] = profile
-                        monthly_max_values[month_key]["Ndot_c"] = max(
-                            monthly_max_values[month_key]["Ndot_c"],
-                            max_values["Ndot_c"],
-                        )
-                        monthly_max_values[month_key]["Edot_c"] = max(
-                            monthly_max_values[month_key]["Edot_c"],
-                            max_values["Edot_c"],
-                        )
-
                         monthly_data[month_key]["days"].append(date)
-                        monthly_data[month_key]["profiles"]["Edot_t_net"].append(profile["Edot_t_net"])
-                        monthly_data[month_key]["profiles"]["Edot_t_baseline"].append(profile["Edot_t_baseline"])
-                        if "battery" in upgrade_key:
-                            monthly_data[month_key]["profiles"]["E"].append(profile["E"])
-                        else:
-                            monthly_data[month_key]["profiles"]["N"].append(profile["N"])
-                            monthly_data[month_key]["profiles"]["Ndot_c"].append(profile["Ndot_c"])
-
-            # Calculate metrics for this design point
+                        for key in ["Ndot_c", "Edot_c"]:
+                            monthly_max_values[month_key][key] = max(monthly_max_values[month_key][key], max_values[key])
+                        for key in keys_to_append:
+                            monthly_data[month_key]["profiles"][key].append(profile[key])
+                
+                # Handle replacements for missing / unsolved days
+                if monthly_data[month_key]["days"]:
+                    year, month = map(int, monthly_data[month_key]["days"][0].split("-")[:2])
+                    all_days = get_all_days_in_month(year, month)
+                    valid_days = monthly_data[month_key]["days"]
+                    for missing_date in set(all_days) - set(valid_days):
+                        replacement_days = get_replacement_days(date)
+                        for replacement_day in replacement_days:
+                            if replacement_day in valid_days:
+                                print(f"Using {replacement_day} as replacement for {missing_date}")
+                                monthly_data[month_key]["days"].append(missing_date)
+                                for key_to_append in keys_to_append:
+                                    monthly_data[month_key]["profiles"][key_to_append].append(
+                                        monthly_data[month_key]["profiles"][key_to_append][valid_days.index(replacement_day)]
+                                    )
+                    
+                    # Sort days and profiles to ensure correct order
+                    sorted_indices = np.argsort(monthly_data[month_key]["days"])
+                    for key in monthly_data[month_key]["profiles"]:
+                        if len(monthly_data[month_key]["profiles"][key]) == len(sorted_indices):
+                            monthly_data[month_key]["profiles"][key] = [
+                                monthly_data[month_key]["profiles"][key][i] for i in sorted_indices
+                            ]
+                    monthly_data[month_key]["days"] = [monthly_data[month_key]["days"][i] for i in sorted_indices]
+            
+            # Calculate metrics
             if design_failed:
                 print(f"  Skipping metrics calculation for {design_key} - design marked as failed")
                 continue
@@ -1293,13 +1274,12 @@ def run_configuration(
                     "energy_capacity",
                     "month_power_capacity",
                     "capacity_factor",
-                    "max_Edot_c",
                 ]
             }
 
             for month_key, month_data in monthly_data.items():
                 complete_monthly_data = calculate_monthly_metrics(
-                    month_data, tariff_key, upgrade_key
+                    month_data, tariff_key, upgrade_key, new_param_vals
                 )
                 if not complete_monthly_data["opex"]:
                     print(f"  Skipping metrics calculation for {month_key} due to empty monthly_opex")
@@ -1323,9 +1303,7 @@ def run_configuration(
                 "energy_metrics": {
                     "rte": np.mean(metric_lists["month_rte"]),
                     "mean_energy_capacity": np.mean(metric_lists["energy_capacity"]),
-                    "mean_power_capacity": np.mean(
-                        metric_lists["month_power_capacity"]
-                    ),
+                    "mean_power_capacity": np.mean(metric_lists["month_power_capacity"]),
                     "capacity_factor": np.mean(metric_lists["capacity_factor"]),
                 },
                 "opex": annual_opex,
@@ -1346,16 +1324,12 @@ def run_configuration(
                 calculate_capex(
                     sub_dict={
                         "param_vals": {
-                            "V_tank": param_values.get("V_tank", 0),
-                            "N_max": param_values.get("N_max", 0),
-                            "E_max": param_values.get("E_max", 0),
-                            "P_max": param_values.get("P_max", 0),
-                            "solar_multiplier": param_values["solar_multiplier"],
-                            "max_Edot_c": (
-                                np.mean(metric_lists["max_Edot_c"])
-                                if metric_lists["max_Edot_c"]
-                                else 0.0
-                            ),
+                            "V_tank": new_param_vals.get("V_tank", 0),
+                            "N_max": new_param_vals.get("N_max", 0),
+                            "E_max": new_param_vals.get("E_max", 0),
+                            "P_max": new_param_vals.get("P_max", 0),
+                            "solar_multiplier": new_param_vals["solar_multiplier"],
+                            "max_Edot_c": max_edot_c,
                         },
                         "max_values": {
                             "Ndot_c": max_ndot_c,
@@ -1366,7 +1340,7 @@ def run_configuration(
                     storage_type=upgrade_key.split("__")[1],
                     new_o2_supply_tech=upgrade_key.split("__")[0],
                     base_wwtp_key=base_wwtp_key,
-                    limits=limits,
+                    new_param_vals=new_param_vals,
                 )
             )
 
@@ -1384,32 +1358,17 @@ def run_configuration(
             )
 
             # Store results
-            limits.update(
-                {
-                    "V_tank": param_values.get("V_tank", None),
-                    "N_max": param_values.get("N_max", None),
-                    "E_max": param_values.get("E_max", None),
-                }
-            )
             annual_metrics.update(
                 {"npv": npv, "capex": capex, "tank_metrics": tank_metrics}
             )
             all_results[design_key] = {
                 "design_key": design_key,
-                "metrics": {
-                    **annual_metrics,
-                    "month_profiles": monthly_data,  # Add monthly data to metrics
-                },
-                "limits": limits,
-                "daily_results": {
-                    k: v
-                    for k, v in daily_results.items()
-                    if k in next(iter(month_to_days.values()))[:10]
-                },
+                "metrics": annual_metrics,
+                "month_profiles": monthly_data,
+                "new_param_vals": new_param_vals,
             }
 
             # Clean up memory
-            del daily_results
             del monthly_data
             del monthly_max_values
             del month_failures

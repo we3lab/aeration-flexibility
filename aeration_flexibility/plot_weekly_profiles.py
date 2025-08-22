@@ -449,7 +449,7 @@ def main():
 
     run_name = "nr_comparison_svcw"  # The run name from your config
     config_name = "o2__psa__1.6__0___none__gas_tank__0___0.0__svcw___1.6__0"  # Config name
-    design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
+    design_key = "0.5__700.0"  # Design key (Hours_of_O2__compression_ratio)
     date = "2022-07-01"  # Specific date (YYYY-MM-DD)
 
     # run_name = "wwtp_comparison_ebmud_40mgd"  # The run name from your config

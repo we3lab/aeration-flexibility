@@ -13,7 +13,7 @@
   },
   "tariff_keys_to_run": ["0.0__ebmud"],
   "data_ingestion": {
-    "shorten_months_run": 1,
+    "shorten_months_run": 12,
     "scale_factor": 0.5,
     "ingest_gas": "o2"
   },
@@ -25,12 +25,13 @@
     "n_jobs": 1
   },
   "script_settings": {
-    "run_ingest_data": false,
+    "run_ingest_data": true,
     "run_solve_optimization": true,
     "run_plotting": true,
     "plot_profiles": false,
     "figure_2": false,
     "figure_4": false,
-    "figure_3": false
+    "figure_3": false,
+    "si_storage": false
   }
 } 

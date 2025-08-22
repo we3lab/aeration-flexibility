@@ -1092,7 +1092,10 @@
             },
             "cleaning": {
                "clean_tukey": false,
-               "outlier_cutoff": [],
+               "outlier_cutoff": [
+                  50,
+                  140
+               ],
                "outlier_chg_cutoff": [],
                "custom_clean_bool": [],
                "custom_clean_function": {

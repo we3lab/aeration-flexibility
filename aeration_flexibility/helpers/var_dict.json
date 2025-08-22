@@ -46,8 +46,7 @@
         "P_b": {"domain": "NonNegativeReals"}, 
         "P_min": {"domain": "NonNegativeReals"}, 
         "P_init": {"domain": "NonNegativeReals"}, 
-        "P_init_base": {"domain": "NonNegativeReals"}, 
-        "starts_per_day": {"domain": "NonNegativeReals"}
+        "P_init_base": {"domain": "NonNegativeReals"}
       },
       "flow_rates": {
         "Ndot_b_max": {"domain": "NonNegativeReals"}, 

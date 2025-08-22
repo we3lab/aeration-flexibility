@@ -32,46 +32,9 @@ profile_columns = [
     and name not in ["total_fng"]
 ]
 
-def get_baseline_param_vals(Ndot_target, Edot_rem, base_wwtp_key):
-    """
-    Generate parameter values for a given scenario and o2_tech.
-
-    Args:
-        Ndot_target: Target oxygen flow rate
-        Edot_rem: Remaining energy demand
-        base_wwtp_key: Key specifying gas type and technology
-
-    Returns:
-        dict: A dictionary of parameter values
-    """
-    Ndot_target = copy.deepcopy(Ndot_target)
-
-    P_b = P_AER + P_ATM
-    gas, o2_tech_base, summer_multiplier, summer_smoothing = split_key(base_wwtp_key)
-    P_init_base = P_init_map[o2_tech_base]
-    ei_o2_base = ei_o2_map[o2_tech_base]
-    ei_evap = ei_evap_kwh if o2_tech_base == "cryo" else 0
-    Edot_b_comp_coeff = compressor_power_linear_coeff(P_init_base, P_b, rec=False)
-    # print(Edot_b_comp_coeff)
-    Edot_b_comp_baseline = Ndot_target / frac_o2_map[gas] * Edot_b_comp_coeff
-    Edot_b_gen_baseline = Ndot_target * ei_o2_base # TODO: debug for EBMUD
-    Edot_b_baseline = Edot_b_comp_baseline + Edot_b_gen_baseline
-    param_vals = {
-        "Ndot_target": Ndot_target,
-        "Edot_rem": Edot_rem,
-        "Edot_t_baseline": Edot_b_baseline + Edot_rem,
-        "Edot_b_baseline": Edot_b_baseline,
-        "P_init_base": P_init_base,
-        "ei_o2_base": ei_o2_base,
-        "ei_evap": ei_evap,
-        "P_b": P_b,
-        "Edot_b_comp_coeff": Edot_b_comp_coeff
-    }
-    return param_vals
-
 
 class O2Problem:
-    def __init__(self, design_key, limits, single_day_config=None, date=None, 
+    def __init__(self, design_key, single_day_config=None, date=None, 
                  initial_storage_state=None, data_wwtp=None, horizon_days=3):
         """Initialize the O2Problem with design parameters and constraints."""
         
@@ -96,7 +59,6 @@ class O2Problem:
         )
         self.nu_rec = self.upgrade_key.split("__")[2] if self.upgrade_key else None
         self.design_key = design_key
-        self.limits = limits
         self.date = date
         self.initial_storage_state = initial_storage_state
 
@@ -125,7 +87,7 @@ class O2Problem:
         for param_name in self.var_dict["parameters"]["indexed"]:
             self.profile_columns.append(param_name)
 
-    def get_new_param_vals(self):
+    def get_remaining_new_param_vals(self, annual_param_limits):
         """
         Generate parameter values for a given scenario and o2_tech.
 
@@ -133,19 +95,17 @@ class O2Problem:
             dict: A dictionary of parameter values
         """
 
-        limits = self.limits
-
         solar_multiplier = float(self.tariff_key.split("__", 1)[0])
 
         # Storage parameters
-        Ndot_target_max = limits["Ndot_target_max"]
-        Ndot_b_max = limits["Ndot_b_max"]
-        Ndot_target_min = limits["Ndot_target_min"]
-        Ndot_target_mean = limits["Ndot_target_mean"]
-        Edot_c_max = limits["Edot_c_max"]
+        Ndot_target_max = annual_param_limits["Ndot_target_max"]
+        Ndot_b_max = annual_param_limits["Ndot_b_max"]
+        Ndot_target_min = annual_param_limits["Ndot_target_min"]
+        Ndot_target_mean = annual_param_limits["Ndot_target_mean"]
+        Edot_c_max = annual_param_limits["Edot_c_max"]
 
         Hours_of_O2, compression_ratio = map(float, self.design_key.split("__"))
-        E_max = limits["Edot_b_mean"] * Hours_of_O2 if self.is_battery else 0
+        E_max = annual_param_limits["Edot_b_mean"] * Hours_of_O2 if self.is_battery else 0
 
         # Calculate V_tank first
         P_max = (
@@ -189,7 +149,7 @@ class O2Problem:
             "Ndot_c_max": 0 if self.is_battery else N_max/1,  # (limit / 1 hour)
             "unmet_o2_max": Ndot_b_max / 10,
             # Energy parameters
-            "Edot_t_max": limits["Edot_t_max"],
+            "Edot_t_max": annual_param_limits["Edot_t_max"],
             "Edot_r_max": E_max / Hours_of_O2 if self.is_battery else 0,
             "Edot_c_max": Edot_c_max,
             "E_max": E_max,
@@ -211,7 +171,6 @@ class O2Problem:
             "y_h2": 2 if self.has_elec else 0,
             "ei_o2_new": ei_o2_map[self.o2_tech_for_storage],
             "frac_o2": frac_o2_map[self.gas],
-            "starts_per_day": 10 if self.is_battery else 5,
             # Solar parameters
             "solar_multiplier": solar_multiplier,
             "hourly_solar_multiplier": (
@@ -235,25 +194,17 @@ class O2Problem:
 
         # Create parameters
         for param_name in self.var_dict["parameters"]["indexed"]:
-            # Get domain from var_dict configuration
             domain = pyo.Reals if self.var_dict["parameters"]["indexed"][param_name]["domain"] == "Reals" else pyo.NonNegativeReals
-                
-            param = pyo.Param(
-                range(self.var_length),
-                domain=domain,
-                mutable=True,
-                default=0,
-            )
+            param = pyo.Param(range(self.var_length), domain=domain, mutable=True, default=0)
             setattr(self.m.vp, param_name, param)
             
-            # Special handling for parameters that need to be extended for three-day optimization
+            # Handling for parameters that need to be extended for n-day optimization
             if param_name in ["hourly_solar_multiplier", "total_fng"] and isinstance(vals[param_name], np.ndarray) and len(vals[param_name]) == 96:
-                # Repeat the 96-hour pattern n times to cover 288 hours
+                # Repeat the 96-hour pattern n times
                 extended_vals = np.tile(vals[param_name], self.horizon_days)
                 for idx in range(self.var_length):
                     param[idx] = float(extended_vals[idx])
             else:
-                # Normal handling for other parameters
                 for idx in range(self.var_length):
                     param[idx] = (
                         float(vals[param_name][idx])
@@ -263,7 +214,6 @@ class O2Problem:
 
         for category_name, category in self.var_dict["parameters"]["non_indexed"].items():
             for param_name in category:
-                # Get domain from var_dict configuration
                 domain = pyo.Reals if category[param_name]["domain"] == "Reals" else pyo.NonNegativeReals
                 param = pyo.Param(domain=domain, mutable=True, default=0)
                 setattr(self.m.vp, param_name, param)
@@ -271,29 +221,21 @@ class O2Problem:
 
         # Create variables
         def create_var(name, props):
-            lower_bound = 0 if props["bounds"][0] is None else props["bounds"][0]
-            upper_bound = None if props["bounds"][1] is None else props["bounds"][1]
+            lb = 0 if props["bounds"][0] is None else props["bounds"][0]
+            ub = None if props["bounds"][1] is None else props["bounds"][1]
 
-            if isinstance(lower_bound, str):
-                lower_bound = getattr(self.m.vp, lower_bound)
-            if isinstance(upper_bound, str):
-                upper_bound = getattr(self.m.vp, upper_bound)
+            if isinstance(lb, str):
+                lb = getattr(self.m.vp, lb)
+            if isinstance(ub, str):
+                ub = getattr(self.m.vp, ub)
 
-            # Get domain from var_dict configuration
             domain_str = props.get("domain", "NonNegativeReals")
             domain = pyo.Reals if domain_str == "Reals" else pyo.NonNegativeReals
 
             if props.get("indexed", True):
-                var = pyo.Var(
-                    range(self.var_length),
-                    domain=domain,
-                    bounds=(lower_bound, upper_bound),
-                )
+                var = pyo.Var(range(self.var_length), domain=domain, bounds=(lb, ub))
             else:
-                var = pyo.Var(
-                    domain=domain,
-                    bounds=(lower_bound, upper_bound),
-                )
+                var = pyo.Var(domain=domain, bounds=(lb, ub))
 
             setattr(self.m.vp, name, var)
 
@@ -353,17 +295,16 @@ class O2Problem:
             # self.m.vp.Edot_t_net[t].set_value(pyo.value(self.m.vp.Edot_t[t]))
             
     
-        solver = pyo.SolverFactory(
-            "ipopt", options={"max_iter": 1000, "tol": 1e-2}
-        )
+        solver = pyo.SolverFactory("ipopt", options={"max_iter": 1000, "tol": 1e-2})
         try: 
             results = solver.solve(self.m, tee=False)
         except:
             return False
+
         if results.solver.termination_condition != pyo.TerminationCondition.optimal:
             print(f"Initialization not optimal: {results.solver.termination_condition}")
             print(f"Solver message: {results.solver.message}")
-            # self.get_diagnostics()
+            self.get_diagnostics()
             return False
         return True
 
@@ -376,13 +317,9 @@ class O2Problem:
         if self.is_gas_tank or self.is_liquid_tank:
             self.m.o2_storage_const = pyo.Block()
             self._add_o2_storage_constraints()
-
         elif self.is_battery:
             self.m.energy_storage_const = pyo.Block()
             self._add_battery_constraints()
-
-        else:
-            raise ValueError("Invalid storage type")
 
         self.add_cost_constraints(charge_dict, prev_demand_dict)
 
@@ -481,14 +418,8 @@ class O2Problem:
                 * self.m.vp.Edot_c_comp_h2_coeff,
             )
         else:
-            self.m.vp.Edot_c_comp = pyo.Expression(
-                range(self.var_length),
-                rule=lambda m, t: 0
-            )
-            self.m.vp.Edot_c_comp_h2 = pyo.Expression(
-                range(self.var_length),
-                rule=lambda m, t: 0
-            )
+            self.m.vp.Edot_c_comp = pyo.Expression(range(self.var_length), rule=lambda m, t: 0)
+            self.m.vp.Edot_c_comp_h2 = pyo.Expression(range(self.var_length), rule=lambda m, t: 0)
 
         # Add constraints to fix initial storage state
         if self.initial_storage_state is not None:
@@ -821,7 +752,7 @@ class O2Problem:
                 )
             else:
                 print(f"  IPOPT failed after {solve_time:.3f}s. Status: {results.solver.termination_condition}")
-                # self.get_diagnostics()
+                self.get_diagnostics()
         except Exception as e:
             print(f"  Error solving {self.m.name}: {str(e)}")
             pass
@@ -829,7 +760,6 @@ class O2Problem:
         return {}, {}
 
     def print_cost_values(self, charge_dict=None, prev_demand_dict=None):
-        # Check if the optimization actually solved successfully
         try:
             test_value = pyo.value(self.m.vp.Edot_t_net[0])
             test_value_2 = pyo.value(self.m.vp.tariff_cost)

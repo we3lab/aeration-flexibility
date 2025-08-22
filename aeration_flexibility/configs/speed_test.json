@@ -13,7 +13,7 @@
   },
   "tariff_keys_to_run": ["0.0__svcw"],
   "data_ingestion": {
-    "shorten_months_run": 1,
+    "shorten_months_run": 12,
     "scale_factor": 2.9,
     "ingest_gas": "air"
   },
@@ -31,6 +31,7 @@
     "plot_profiles": false,
     "figure_2": false,
     "figure_4": false,
-    "figure_3": false
+    "figure_3": false,
+    "si_storage": false
   }
 } 

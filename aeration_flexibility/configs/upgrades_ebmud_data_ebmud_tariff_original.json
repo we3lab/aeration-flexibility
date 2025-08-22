@@ -31,6 +31,7 @@
     "plot_profiles": false,
     "figure_2": true,
     "figure_4": false,
-    "figure_3": false
+    "figure_3": false,
+    "si_storage": true
   }
 } 

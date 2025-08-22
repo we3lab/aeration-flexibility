@@ -43,7 +43,7 @@
   },
   "tariff_keys_to_run": ["0.0__svcw"],
   "data_ingestion": {
-    "shorten_months_run": 1,
+    "shorten_months_run": 4,
     "scale_factor": 1.0,
     "ingest_gas": "air"
   },
@@ -52,15 +52,16 @@
     "comp_ratio_range": [10.0, 700.0],
     "designs_per_run": 5,
     "max_iterations": 2,
-    "n_jobs": 14
+    "n_jobs": 40
   },
   "script_settings": {
-    "run_ingest_data": false,
+    "run_ingest_data": true,
     "run_solve_optimization": true,
     "run_plotting": true,
     "plot_profiles": false,
     "figure_2": false,
     "figure_4": true,
-    "figure_3": false
+    "figure_3": false,
+    "si_storage": false
   }
 } 
