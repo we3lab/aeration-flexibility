@@ -1,5 +1,4 @@
 import pyomo.environ as pyo
-import copy
 import numpy as np
 import json
 import os
@@ -18,12 +17,9 @@ temp_stdout = StringIO()
 sys.stdout = temp_stdout
 sys.stdout = sys.__stdout__
 
-# Load variable dictionary
 HELPERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-var_dict_path = os.path.join(HELPERS_DIR, "var_dict.json")
-if not os.path.exists(var_dict_path):
-    raise FileNotFoundError(f"Could not find var_dict.json at {var_dict_path}")
-var_dict = json.load(open(var_dict_path))
+var_dict = json.load(open(os.path.join(HELPERS_DIR, "var_dict.json")))
+
 profile_columns = [
     name
     for name, props in var_dict.items()
@@ -34,6 +30,7 @@ profile_columns = [
 
 
 class O2Problem:
+
     def __init__(self, design_key, single_day_config=None, date=None, 
                  initial_storage_state=None, data_wwtp=None, horizon_days=3):
         """Initialize the O2Problem with design parameters and constraints."""
@@ -136,7 +133,7 @@ class O2Problem:
 
         N_max = Hours_of_O2 * Ndot_target_mean
 
-        self.new_param_vals = {
+        return {
             # Flow rate parameters
             "Ndot_b_max": Ndot_b_max,
             "Ndot_b_excess_max": Ndot_b_max if self.has_surplus else 0,
@@ -186,7 +183,7 @@ class O2Problem:
             "total_fng": np.zeros(var_length)
         }
 
-    def create_vars_and_params(self, baseline_vals, new_vals, charge_dict):
+    def create_vars_and_params(self, baseline_vals, new_vals):
         """Create variables and parameters for the model."""
         vals = {**baseline_vals, **new_vals}
         self.m.t = pyo.Set(initialize=range(int(self.var_length)))
@@ -277,36 +274,11 @@ class O2Problem:
             self.m.vp.Ndot_b_excess[t].set_value(0)
             self.m.vp.Ndot_b[t].set_value(blower_val)
             
-            # 2: Initialize storage flow variables to zero, or filling the gap of missing capacity
+            # 2. Initialize storage flow variables to zero, or filling the gap of missing capacity
             if self.is_tank:
                 gap = max(0, pyo.value(self.m.vp.Ndot_target[t]) - pyo.value(self.m.vp.Ndot_b_max))
                 self.m.vp.Ndot_r[t].set_value(gap)
                 self.m.vp.Ndot_c[t].set_value(0)
-            
-            # 3: Initialize energy variables
-            # self.m.vp.Edot_b[t].set_value(max(10,pyo.value(self.m.vp.Edot_t_baseline[t]) - pyo.value(self.m.vp.Edot_rem[t])))
-            # self.m.vp.Edot_c[t].set_value(0)
-            # self.m.vp.Edot_r[t].set_value(0)
-            # if self.is_tank:
-            #     self.m.vp.Edot_r_o2[t].set_value(0)
-            
-            # # # 4: Calculate Edot_t to satisfy energy balance constraint
-            # self.m.vp.Edot_t[t].set_value(pyo.value(self.m.vp.Edot_b[t]) + pyo.value(self.m.vp.Edot_rem[t]))
-            # self.m.vp.Edot_t_net[t].set_value(pyo.value(self.m.vp.Edot_t[t]))
-            
-    
-        solver = pyo.SolverFactory("ipopt", options={"max_iter": 1000, "tol": 1e-2})
-        try: 
-            results = solver.solve(self.m, tee=False)
-        except:
-            return False
-
-        if results.solver.termination_condition != pyo.TerminationCondition.optimal:
-            print(f"Initialization not optimal: {results.solver.termination_condition}")
-            print(f"Solver message: {results.solver.message}")
-            self.get_diagnostics()
-            return False
-        return True
 
     def construct_constraints(self, charge_dict, prev_demand_dict):
         self.m.base_const = pyo.Block()
@@ -687,9 +659,9 @@ class O2Problem:
         self.m.obj = pyo.Objective(expr=obj_expr, sense=pyo.minimize)
         return self.m
 
-    def construct_problem(self, charge_dict, baseline_vals=None, prev_demand_dict=None):        
+    def construct_problem(self, charge_dict, baseline_vals, new_param_vals, prev_demand_dict=None):
         self.var_length = len(baseline_vals["Ndot_target"])
-        self.create_vars_and_params(baseline_vals, self.new_param_vals, charge_dict)
+        self.create_vars_and_params(baseline_vals, new_param_vals)
         self.construct_constraints(charge_dict, prev_demand_dict)
         self.initialize_vars()
         self.construct_objective()
@@ -730,7 +702,6 @@ class O2Problem:
         print(f"{self.design_key} min, max Edot_t_net: {min(values)}, {max(values)}, Edot_t_baseline: {min(baseline_values)}, {max(baseline_values)}, cost {self.m.vp.tariff_cost.value}")
         return profile_dict
 
-
     def solve_optimization_day(self, tee=False):
         start_time = time.time()
         try:
@@ -741,8 +712,7 @@ class O2Problem:
             solve_time = time.time() - start_time
 
             if results.solver.termination_condition == pyo.TerminationCondition.optimal:
-                profile = self.get_profile()
-                return profile, self.new_param_vals
+                return self.get_profile()
             elif (
                 results.solver.termination_condition
                 == pyo.TerminationCondition.maxIterations
@@ -752,12 +722,12 @@ class O2Problem:
                 )
             else:
                 print(f"  IPOPT failed after {solve_time:.3f}s. Status: {results.solver.termination_condition}")
-                self.get_diagnostics()
+                # self.get_diagnostics()
         except Exception as e:
             print(f"  Error solving {self.m.name}: {str(e)}")
             pass
 
-        return {}, {}
+        return {}
 
     def print_cost_values(self, charge_dict=None, prev_demand_dict=None):
         try:
@@ -803,19 +773,10 @@ class O2Problem:
         print(f"  tariff_cost cost: {round(pyo.value(self.m.vp.tariff_cost),0)}")
         print(f"  baseline cost: {round(baseline_itemized_costs['total'],0)}")
         print(f"  non-pyo-obj recalculated cost: {round(recalculated_cost['total'],0)}")
-       
         print('pyo var itemized')
         for utility, utility_costs in self.itemized_costs.items():
-            if utility != "total":  # Skip the total key
-                for charge_type, cost_value in utility_costs.items():
-                    if charge_type != "total":
-                        print(f"    {utility}_{charge_type}: ${pyo.value(cost_value):,.2f}")
- 
-        print('recalculated itemized')
-        for utility, utility_costs in recalculated_cost.items():
-            if utility != "total":  # Skip the total key
-                for charge_type, cost_value in utility_costs.items():
-                    if charge_type != "total":
-                        print(f"    {utility}_{charge_type}: ${cost_value:,.2f}")
+            for charge_type, cost_value in utility_costs.items():
+                if charge_type != "total":
+                    print(f"    {utility}_{charge_type}: ${pyo.value(cost_value):,.2f}")
 
         sys.stderr.flush()

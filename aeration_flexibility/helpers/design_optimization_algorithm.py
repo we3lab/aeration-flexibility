@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import gc
 import time
+import copy
 from multiprocessing import Pool
 from helpers.operational_optimization_problem import *
 from helpers.tariffs import *
@@ -128,7 +129,6 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
         design_key=design_key, date=f"{group_days[0]}_to_{group_days[-1]}", 
         initial_storage_state=initial_storage_state, data_wwtp='svcw', horizon_days=horizon_days
     )
-    problem.new_param_vals = new_param_vals
 
     # Check if concatenated data has correct length
     if len(concatenated_baseline_vals["Ndot_target"]) != len(group_days) * 96:
@@ -137,16 +137,18 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
         return (None, None, None, None)
 
     # Construct and solve optimization problem with N-day data
+    construct_start = time.time()
     problem.construct_problem(
         charge_dict=concatenated_charge_dict,
         baseline_vals=concatenated_baseline_vals,
+        new_param_vals=new_param_vals,
         prev_demand_dict=prev_demand_dict,
     )
+    # print(f"  Problem construction: {(time.time() - construct_start):.3f}s")
+    
     solve_start = time.time()
-    profile, new_param_vals = problem.solve_optimization_day()
-    solve_time = time.time() - solve_start
-    total_time = time.time() - problem_start
-    print(f"Problem Solve time: {solve_time:.3f}s, Total: {total_time:.3f}s")
+    profile = problem.solve_optimization_day()
+    # print(f"  Problem Solve time: {(time.time() - solve_start):.3f}s, Total: {(time.time() - problem_start):.3f}s")
     
     # problem.print_cost_values(charge_dict=concatenated_charge_dict, prev_demand_dict=prev_demand_dict)
     del problem.m
@@ -179,9 +181,9 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
                 max_values_dict[day] = {"Ndot_c": 0, "Edot_c": 0}
                 initial_storage_state_next_run = None
         
-        return profiles_dict, new_param_vals, max_values_dict, initial_storage_state_next_run
+        return profiles_dict, max_values_dict, initial_storage_state_next_run
 
-    return None, None, None, None
+    return None, None, None
 
 
 def extract_final_storage_state(profile):
@@ -248,9 +250,8 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     """Process a single design point and month combination using N-day optimization with 1-day overlap.
 
     Args:
-        design_point_data: Tuple of (Hours_of_O2, compression_ratio, month_key_and_days,
-                                   base_wwtp_key, upgrade_key, tariff_key, new_param_vals,
-                                   baseline_val_dict, new_param_vals)
+        design_point_data: Tuple of (design_key, month_key, month_days, base_wwtp_key, upgrade_key,
+                                    tariff_key, new_param_vals, baseline_val_dict, new_param_vals)
         run_name: Name of the run for saving intermediate results
         intermediate_filepaths: Dictionary of file paths to already-solved intermediate results
         horizon_days: Number of days to process in each horizon (default 3)
@@ -312,23 +313,25 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             all_intermediate_available = False
         
         if all_intermediate_available:
+            dummy_file_days = []
             for group_day in group_days:
                 with open(intermediate_filepaths[design_key][month_key][group_day], 'rb') as f:
                     group_day_data = pickle.load(f)
                 
                 profile = group_day_data["profile"]
-                new_param_vals = group_day_data["new_param_vals"]
                 max_values = group_day_data["max_values"]
                 
                 if profile and "Edot_t_net" in profile:  # solved day
                     month_results[group_day] = (profile, max_values)
                     processed_days.add(group_day)
                 else:  # dummy file / failed day
-                    print(f"  Loaded dummy file for failed day {group_day}: {group_day_data['failure_reason']}")
                     month_results[group_day] = (None, max_values)
                     day_failures += 1
+                    dummy_file_days.append(group_day)
                 
                 del group_day_data
+            if dummy_file_days:
+                print(f"  Found dummy files for days: {dummy_file_days}")
         else:
             initial_storage_state = None
             if i == 0:
@@ -346,7 +349,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                         initial_storage_state = extract_final_storage_state(prev_profile)
             
             # Process the N-day group
-            profiles_dict, new_param_vals, max_values_dict, final_storage_state_prev_run = process_n_days(
+            profiles_dict, max_values_dict, final_storage_state_prev_run = process_n_days(
                 group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals,
                 baseline_val_dict, charge_dict_month, prev_demand_dict=prev_demand_dict,
                 initial_storage_state=initial_storage_state, horizon_days=horizon_days
@@ -421,7 +424,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             is_feasible, failure_reason, _ = check_design_feasibility(month_results, summer_multiplier)
             if not is_feasible:
                 print(f"  ✗ Design {design_key} in {month_key} marked as {failure_reason} after {day_failures} failures")
-                break
+                return (design_key, month_key, month_results, new_param_vals, False, failure_reason)
         
         i += (horizon_days - 1)  # include 1 day overlap for next group
 
@@ -445,17 +448,8 @@ def is_valid_npv(npv):
     return np.isfinite(npv)
 
 
-def sample_from_multivariate_normal(
-    all_designs,
-    designs_per_run,
-    o2_range,
-    comp_ratio_range,
-    upgrade_key,
-    elite_samples=8,
-    exploration_prob=0.3,
-    exp_weight=2.0,
-    min_variance=1e-3,
-):
+def sample_from_multivariate_normal(all_designs, designs_per_run, o2_range, comp_ratio_range, upgrade_key,
+                                    elite_samples=8, exp_weight=2.0, min_variance=1e-3):
     """
     Sample new points using cross-entropy method with configurable hyperparameters.
     
@@ -466,7 +460,7 @@ def sample_from_multivariate_normal(
         comp_ratio_range: (min, max) range for compression ratio
         upgrade_key: Type of upgrade (determines if univariate or bivariate)
         elite_samples: Number of elite points to use for fitting distribution
-        exploration_prob: Probability of uniform random sampling vs exploitation
+        prior_improvement: Improvement from previous iteration (None for first iteration)
         exp_weight: Exponential weighting factor for elite selection
         min_variance: Minimum variance for numerical stability
     """
@@ -477,7 +471,6 @@ def sample_from_multivariate_normal(
     points, npvs = [], []
     is_univariate = "battery" in upgrade_key or "liquid" in upgrade_key
     
-    print('Sampling from mvn')
     for design_key, design_data in all_designs.items():
         npv = design_data["metrics"]["npv"]["total"]
         if is_valid_npv(npv):
@@ -493,7 +486,7 @@ def sample_from_multivariate_normal(
     
     # Select elite points
     elite_count = min(elite_samples, len(points))
-    elite_indices = np.argsort(npvs)[-elite_count:]  # Top elite_count
+    elite_indices = np.argsort(npvs)[-elite_count:]
     elite_points = points[elite_indices]
     elite_npvs = npvs[elite_indices]
     
@@ -507,13 +500,11 @@ def sample_from_multivariate_normal(
     
     # Fit distribution
     mu = np.average(elite_points, axis=0, weights=weights)
-    
     if is_univariate:
         var = np.average((elite_points[:, 0] - mu[0])**2, weights=weights)
         sigma = np.sqrt(max(var, min_variance))
         mu_sigma = {"mu": float(mu[0]), "sigma": float(sigma)}
     else:
-        print('Calculating weighted covariance')
         centered = elite_points - mu
         cov = np.zeros((2, 2))
         for i in range(len(elite_points)):
@@ -524,42 +515,23 @@ def sample_from_multivariate_normal(
         mu_sigma = {"mu": mu.tolist(), "sigma": cov.tolist()}
     
     # Generate new points
-    new_points = set()
-    max_attempts = designs_per_run * 100
-    
-    for _ in range(max_attempts):
+    new_points = set()    
+    for _ in range(designs_per_run * 100):
         if len(new_points) >= designs_per_run:
             break
             
-        # Exploration vs exploitation
-        if local_rng.random() < exploration_prob:
-            # Uniform sampling
-            if is_univariate:
-                sample = local_rng.uniform(o2_range[0], o2_range[1])
-                candidate = (round(sample, 2), 100.0)
-            else:
-                h = local_rng.uniform(o2_range[0], o2_range[1])
-                r = local_rng.uniform(comp_ratio_range[0], comp_ratio_range[1])
-                candidate = (round(h, 2), round(r, 1))
+        # Sample from fitted distribution
+        if is_univariate:
+            sample = local_rng.normal(mu_sigma["mu"], mu_sigma["sigma"])
+            sample = np.clip(sample, o2_range[0], o2_range[1])
+            candidate = (round(sample, 2), 100.0)
         else:
-            # Sample from fitted distribution
-            if is_univariate:
-                sample = local_rng.normal(mu_sigma["mu"], mu_sigma["sigma"])
-                sample = np.clip(sample, o2_range[0], o2_range[1])
-                candidate = (round(sample, 2), 100.0)
-            else:
-                try:
-                    sample = local_rng.multivariate_normal(mu_sigma["mu"], mu_sigma["sigma"])
-                    sample[0] = np.clip(sample[0], o2_range[0], o2_range[1])
-                    sample[1] = np.clip(sample[1], comp_ratio_range[0], comp_ratio_range[1])
-                    candidate = (round(sample[0], 2), round(sample[1], 1))
-                except np.linalg.LinAlgError:
-                    # Fallback to uniform sampling
-                    h = local_rng.uniform(o2_range[0], o2_range[1])
-                    r = local_rng.uniform(comp_ratio_range[0], comp_ratio_range[1])
-                    candidate = (round(h, 2), round(r, 1))
-        
-        # Only add if not already in all_designs and not already in new_points
+            sample = local_rng.multivariate_normal(mu_sigma["mu"], mu_sigma["sigma"])
+            sample[0] = np.clip(sample[0], o2_range[0], o2_range[1])
+            sample[1] = np.clip(sample[1], comp_ratio_range[0], comp_ratio_range[1])
+            candidate = (round(sample[0], 2), round(sample[1], 1))
+
+        # Add if not already in all_designs or new_points
         candidate_key = f"{candidate[0]}__{candidate[1]}"
         if candidate_key not in all_designs and candidate not in new_points:
             new_points.add(candidate)
@@ -793,9 +765,6 @@ def get_baseline_param_vals(Ndot_target, Edot_rem, base_wwtp_key):
     Edot_b_comp_baseline = Ndot_target / frac_o2_map[gas] * Edot_b_comp_coeff
     Edot_b_gen_baseline = Ndot_target * ei_o2_base # TODO: debug for EBMUD
     Edot_b_baseline = Edot_b_comp_baseline + Edot_b_gen_baseline
-    print(f'Ndot_target mean: {Ndot_target.mean()}')
-    print(f'Edot_b_baseline mean, max and min {Edot_b_baseline.mean()})')
-    print(f'Edot_rem mean, max and min {Edot_rem.mean()})')
     return {
         "Ndot_target": Ndot_target,
         "Edot_rem": Edot_rem,
@@ -815,37 +784,27 @@ def get_remaining_new_param_vals_function(design_key, base_wwtp_key, upgrade_key
         single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
         design_key=design_key, date="dummy", data_wwtp='svcw',
     )
-    problem.get_remaining_new_param_vals(annual_param_limits)
-    param_vals = problem.new_param_vals
+    param_vals = problem.get_remaining_new_param_vals(annual_param_limits)
     del problem  # clean up memory
     return param_vals
     
     
-def run_configuration(
-    config,
-    run_name,
-    designs_per_run,
-    o2_range,
-    comp_ratio_range,
-    n_jobs,
-    max_iterations,
-    skip_already_run=True,
-    horizon_days=3,
+def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_range,
+                    n_jobs, max_iterations, skip_already_run=True, horizon_days=3, convergence_threshold = 0.005
 ):
     """Run optimization for a single configuration (combination of base facility, upgrade key, tariff key).
     
     Args:
         config: Configuration dictionary
-        base_run_name: Base name for the run
+        run_name: Base name for the run
         designs_per_run: Number of designs to run per iteration
         o2_range: Range of O2 storage hours
         comp_ratio_range: Range of compression ratios
         n_jobs: Number of parallel jobs
         max_iterations: Maximum number of optimization iterations
         skip_already_run: Whether to skip already completed runs
-        Ndot_b_max: Maximum blower flow rate
-        ingest_gas: Gas ingestion configuration
-        horizon_days: Number of days to process in each rolling horizon (default 3)
+        horizon_days: Number of days to process in each rolling horizon (default 3
+        convergence_threshold: improvement threshold to exit design search loop
     """
     output_dir = f"aeration_flexibility/output_data/{run_name}"
     os.makedirs(output_dir, exist_ok=True)
@@ -898,11 +857,8 @@ def run_configuration(
     if os.path.exists(config_file_path):
         with open(config_file_path, 'rb') as f:
             config_results = pickle.load(f)
-            if 'all_results' in config_results:
-                all_results.update(config_results['all_results'])
-                print(f"  Loaded existing results for {config_name}")
-    else:
-        print(f"  No existing results found for {config_name}")
+            all_results.update(config_results['all_results'])
+            print(f"  Loaded existing results for {config_name}")
 
     # Load day profiles and group days by month
     with open(f"aeration_flexibility/output_data/{run_name}/day_profiles.pkl", "rb") as f:
@@ -938,12 +894,8 @@ def run_configuration(
         )
 
     # Calculate system annual_param_limits
-    print('system limits')
-    print(baseline_val_dict['2022-07-05'].keys())
-    print(baseline_val_dict['2022-07-05']['Edot_t_baseline'])
     Ndot_target_year = np.array([val["Ndot_target"] for val in baseline_val_dict.values()])
     Edot_t_max = np.max(np.concatenate([val["Edot_t_baseline"] for val in baseline_val_dict.values()]))
-    print(f'Edot_t_max: {Edot_t_max}')
     if float(summer_multiplier) > 1.0:
         Ndot_b_max = np.max(Ndot_target_year) / float(summer_multiplier)
         Edot_c_max = Edot_t_max / float(summer_multiplier)
@@ -1020,11 +972,11 @@ def run_configuration(
     mu_sigma_history = []
     sampled_points_history = []
     iteration = 0
+    infeasible_designs = set()
 
     # Initialize convergence tracking
     best_npv = -np.inf
     no_improvement_count = 0
-    convergence_threshold = 0.005  # 0.5% improvement threshold (less strict)
     min_iterations = 3  # Minimum iterations before checking convergence
 
     # Get initial design points
@@ -1040,13 +992,7 @@ def run_configuration(
             mu_sigma_history.append(None)  # No mu/sigma for initial points
         else:
             # Sample new points using MVN
-            design_points, mu_sigma = sample_from_multivariate_normal(
-                all_results,
-                designs_per_run,
-                o2_range,
-                comp_ratio_range,
-                upgrade_key,
-            )
+            design_points, mu_sigma = sample_from_multivariate_normal(all_results, designs_per_run, o2_range, comp_ratio_range, upgrade_key)
             if not design_points:
                 print("No valid points generated for sampling. Stopping optimization.")
                 break
@@ -1088,12 +1034,48 @@ def run_configuration(
                 no_improvement_count = 0
                 print(f"Current best NPV: ${current_best_npv:,.2f}, continuing")
             best_npv = current_best_npv
-
         # Sort design points by hours (descending) and create job queue with design point-month combinations
         sorted_unsolved_points = sorted(unsolved_points, key=lambda x: x[0], reverse=True)
-        job_queue = []
+        print(f"  Creating job queue from {len(sorted_unsolved_points)} unsolved points")
+        print(f"  Current infeasible_designs: {sorted(list(infeasible_designs))}")
+        
+        # First pass: check intermediate files and mark designs as infeasible
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
+            if intermediate_filepaths and design_key in intermediate_filepaths:
+                for month_key, month_files in intermediate_filepaths[design_key].items():
+                    failed_days = 0
+                    total_days = len(month_files)
+                    for day_file in month_files.values():
+                        with open(day_file, 'rb') as f:
+                            day_data = pickle.load(f)
+                            if not day_data.get("profile") or "Edot_t_net" not in day_data.get("profile", {}):
+                                failed_days += 1
+                    if failed_days > total_days / 2:
+                        infeasible_designs.add(design_key)
+                        print(f"  Marking {design_key} as infeasible based on intermediate files ({failed_days}/{total_days} failed days in {month_key})")
+                        break
+        
+        # Second pass: apply hierarchical pruning - if a larger design fails, all smaller designs are infeasible
+        if infeasible_designs:
+            max_failed_hours = max(float(design.split('__')[0]) for design in infeasible_designs)            
+            for Hours_of_O2, compression_ratio in sorted_unsolved_points:
+                design_key = f"{Hours_of_O2}__{compression_ratio}"
+                if float(Hours_of_O2) <= max_failed_hours and design_key not in infeasible_designs:
+                    infeasible_designs.add(design_key)
+                    print(f"  Marking {design_key} as infeasible (≤{max_failed_hours} hours)")
+        
+        # Create job queue, skipping infeasible designs
+        job_queue = []
+        skipped_count = 0
+        for Hours_of_O2, compression_ratio in sorted_unsolved_points:
+            design_key = f"{Hours_of_O2}__{compression_ratio}"
+            
+            # Skip this design if already known to be infeasible
+            if design_key in infeasible_designs:
+                skipped_count += 1
+                continue
+                
             new_param_vals = get_remaining_new_param_vals_function(
                 design_key, base_wwtp_key, upgrade_key, tariff_key, annual_param_limits
                 )
@@ -1101,6 +1083,7 @@ def run_configuration(
             for month_key, month_days in month_to_days.items():
                 job_queue.append((design_key, month_key, month_days, base_wwtp_key, upgrade_key, tariff_key,
                                   None, baseline_val_dict, new_param_vals))
+        print(f"  Created {len(job_queue)} jobs, skipped {skipped_count} infeasible designs")
 
         # Create parent directories for intermediate results
         for Hours_of_O2, compression_ratio in sorted_unsolved_points:
@@ -1109,7 +1092,6 @@ def run_configuration(
             os.makedirs(intermediate_dir, exist_ok=True)
 
         # Track infeasible design points to prune smaller hours
-        infeasible_designs = set()
         results = []
 
         # Process jobs with dynamic pruning
@@ -1163,7 +1145,6 @@ def run_configuration(
                                 job_index += 1
                                 continue
                             
-                            # Submit job
                             async_result = pool.apply_async(process_design_point_and_month, 
                                                             args=(job_data, run_name, intermediate_filepaths, horizon_days))
                             pending_jobs[async_result] = (job_index, design_key)
