@@ -6,41 +6,35 @@ import gc
 import time
 import copy
 from multiprocessing import Pool
+
+from electric_emission_cost import costs, metrics
+
 from helpers.operational_optimization_problem import *
-from helpers.tariffs import *
 from helpers.capex_npv_energy_metrics import *
 from helpers.parameters import *
 from helpers.config_labels import *
-from helpers.tariffs import get_tariff_data, get_charge_dict_for_month
-from electric_emission_cost import costs, metrics
-
-from helpers.tariffs import CALENDAR_MONTHS
+from helpers.tariffs import get_tariff_data, get_charge_dict_for_month, CALENDAR_MONTHS
 
 # Set numpy random seed to match tariffs.py
 np.random.seed(RANDOM_SEED)
 
-def concatenate_n_days_data(baseline_val_dict, charge_dict_month, days, start_day_idx):
+def concatenate_n_days_data(baseline_val_dict, charge_dict_month, group_days):
     """
     Concatenate data for N consecutive days starting from start_day_idx.
     
     Args:
         baseline_val_dict: Dictionary of baseline values for each day
         charge_dict_month: Monthly charge dictionary
-        days: List of days in the month
-        start_day_idx: Starting index for the N-day group
+        group_days: Days for processing
     
     Returns:
-        tuple: (concatenated_baseline_vals, concatenated_charge_dict, day_dates)
+        tuple: (concatenated_baseline_vals, concatenated_charge_dict)
     """
-    # Get the N days (or remaining days if < N)
-    end_day_idx = min(start_day_idx + len(days), len(days))
-    group_days = days[start_day_idx:end_day_idx]
     
-    # Concatenate baseline values
+    # Concatenate indexed baseline values
     concatenated_baseline_vals = {}
     for key in baseline_val_dict[group_days[0]].keys():
         if isinstance(baseline_val_dict[group_days[0]][key], np.ndarray):
-            # For indexed parameters, concatenate arrays and convert to pandas Series
             concatenated_vals = []
             for day in group_days:
                 concatenated_vals.append(baseline_val_dict[day][key])
@@ -60,38 +54,12 @@ def concatenate_n_days_data(baseline_val_dict, charge_dict_month, days, start_da
             concatenated_vals.append(charge_dict_month[charge_key][start_idx:end_idx])
         concatenated_charge_dict[charge_key] = np.concatenate(concatenated_vals)
     
-    return concatenated_baseline_vals, concatenated_charge_dict, group_days
+    return concatenated_baseline_vals, concatenated_charge_dict
 
 
-def extract_day_results_from_n_day_profile(profile, day_idx, total_days_in_group):
-    """
-    Extract results for a specific day from an N-day optimization profile.
-    
-    Args:
-        profile: N-day optimization profile (numpy arrays for time-series data)
-        day_idx: Index of the day to extract (0, 1, ..., N-1)
-        total_days_in_group: Total number of days in the group
-    
-    Returns:
-        dict: Single-day profile with pandas Series for time-series data
-    """
-    if not profile:
-        return None    
-    
-    day_profile = {}
-    start_idx = day_idx * 96
-    for key, value in profile.items():
-        # Check if this is time-series data
-        if hasattr(value, '__len__') and len(value) == total_days_in_group * 96:
-            day_profile[key] = pd.Series(value[start_idx:start_idx + 96])
-        else:  # non-time-series data
-            day_profile[key] = value
-    
-    return day_profile
-
-def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals, 
+def process_n_days(group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals, 
                   baseline_val_dict, charge_dict_month, prev_demand_dict=None,
-                  initial_storage_state=None, horizon_days=3):
+                  initial_SoS=None, horizon_days=3):
     """
     Process N consecutive days as a single optimization problem.
     
@@ -105,29 +73,22 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
         baseline_val_dict: Dictionary of baseline values for each day
         charge_dict_month: Monthly charge dictionary
         prev_demand_dict: Previous demand dictionary
-        initial_storage_state: Initial storage state for the first day
+        initial_SoS: Initial storage state for the first day
     
     Returns:
-        tuple: (profiles_dict, new_param_vals, max_values_dict, initial_storage_states_dict)
+        tuple: (profiles_dict, new_param_vals, max_values_dict, initial_SoSs_dict)
     """
     
-    # Load tariff data for this tariff_key
-    tariff_data = get_tariff_data()
-    if tariff_key not in tariff_data:
-        print(f"Warning: Tariff key {tariff_key} not found in tariff data")
-        return (None, None, None, None)
-    
-    # Concatenate data for the N days
-    concatenated_baseline_vals, concatenated_charge_dict, group_days = concatenate_n_days_data(
-        baseline_val_dict, charge_dict_month, days, 0
+    concatenated_baseline_vals, concatenated_charge_dict = concatenate_n_days_data(
+        baseline_val_dict, charge_dict_month, group_days
     )
 
     # Create problem instance for N days
     problem_start = time.time()
     problem = O2Problem(
-        single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
+        single_day_config=get_config_name(base_wwtp_key, upgrade_key, tariff_key),
         design_key=design_key, date=f"{group_days[0]}_to_{group_days[-1]}", 
-        initial_storage_state=initial_storage_state, data_wwtp='svcw', horizon_days=horizon_days
+        initial_SoS=initial_SoS, horizon_days=horizon_days
     )
 
     # Check if concatenated data has correct length
@@ -148,7 +109,7 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
     
     solve_start = time.time()
     profile = problem.solve_optimization_day()
-    # print(f"  Problem Solve time: {(time.time() - solve_start):.3f}s, Total: {(time.time() - problem_start):.3f}s")
+    print(f"  Problem Solve time: {(time.time() - solve_start):.3f}s, Total: {(time.time() - problem_start):.3f}s")
     
     # problem.print_cost_values(charge_dict=concatenated_charge_dict, prev_demand_dict=prev_demand_dict)
     del problem.m
@@ -159,10 +120,16 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
         max_values_dict = {}
         
         for day_idx, day in enumerate(group_days):
+
             # Extract day-specific profile
-            day_profile = extract_day_results_from_n_day_profile(
-                profile, day_idx, len(group_days)
-            )
+            day_profile = {}
+            start_idx = day_idx * 96
+            for key, value in profile.items():
+                # Check if this is time-series data
+                if hasattr(value, '__len__') and len(value) == len(group_days) * 96:
+                    day_profile[key] = pd.Series(value[start_idx:start_idx + 96])
+                else:  # non-time-series data
+                    day_profile[key] = value
             
             if day_profile and "Edot_t_net" in day_profile:
                 profiles_dict[day] = day_profile
@@ -175,13 +142,13 @@ def process_n_days(days, design_key, base_wwtp_key, upgrade_key, tariff_key, new
                 
                 # Store initial storage state for the second to last day of the group
                 if day_idx == len(group_days) - 2 or len(group_days)<horizon_days:  # Second to last day
-                    initial_storage_state_next_run = extract_final_storage_state(day_profile)
+                    initial_SoS_next_run = extract_final_storage_state(day_profile)
             else:
                 profiles_dict[day] = None
                 max_values_dict[day] = {"Ndot_c": 0, "Edot_c": 0}
-                initial_storage_state_next_run = None
+                initial_SoS_next_run = None
         
-        return profiles_dict, max_values_dict, initial_storage_state_next_run
+        return profiles_dict, max_values_dict, initial_SoS_next_run
 
     return None, None, None
 
@@ -235,18 +202,20 @@ def check_design_feasibility(month_results, summer_multiplier):
     if float(summer_multiplier) > 1.0 and failed_days > 5: # more than 2 horizons
         return False, "insufficient_storage", failed_days
     
-    # Check for general failure (more than 50% failed)
-    if failed_days > len(month_results) / 2:
-        return False, "half_failed", failed_days
+    # Check for general failure (4 or more days failed)
+    if failed_days >= 4:
+        return False, "four_or_more_failed", failed_days
     
     return True, None, failed_days
+
 
 def skip_saving_last_day(horizon_days, i, day_idx, days):
     is_last_day_of_month = (i + horizon_days >= len(days))
     is_last_day_of_horizon = (day_idx == horizon_days - 1)
     return is_last_day_of_horizon and not is_last_day_of_month
 
-def process_design_point_and_month(design_point_data, run_name, intermediate_filepaths=None, horizon_days=3):
+
+def process_design_point_and_month(design_point_data, run_name, tariff_data, intermediate_filepaths=None, horizon_days=3):
     """Process a single design point and month combination using N-day optimization with 1-day overlap.
 
     Args:
@@ -268,7 +237,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     # Initialize prev_demand_dict with zero demands for all charge types
     prev_demand_dict = {}
     demand_charge_info_dict = get_demand_charge_info_dict(
-        tariff_key, month, int(year)
+        tariff_key, month, int(year), tariff_data
     )
     for charge_key in demand_charge_info_dict.keys():
         if "demand" in charge_key:
@@ -284,13 +253,6 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     config_name = get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix)
     intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}"
     os.makedirs(intermediate_dir, exist_ok=True)    
-    
-    # Load tariff data for the month
-    tariff_data = get_tariff_data()
-    if tariff_key not in tariff_data:
-        print(f"Warning: Tariff key {tariff_key} not found in tariff data")
-        return (design_key, month_key, [], new_param_vals, {"baseline": [], "optimized": []}, 
-                False, "tariff_not_found")
     
     charge_dict_month = get_charge_dict_for_month(tariff_data[tariff_key], int(year), int(month))
 
@@ -333,10 +295,10 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
             if dummy_file_days:
                 print(f"  Found dummy files for days: {dummy_file_days}")
         else:
-            initial_storage_state = None
+            initial_SoS = None
             if i == 0:
                 if float(summer_multiplier) > 1.0: # Give half storage to help with first day feasibility
-                    initial_storage_state = {'N': new_param_vals.get('N_max',0)/2, 'E': 0}
+                    initial_SoS = {'N': new_param_vals.get('N_max',0)/2, 'E': 0}
                 else:  # O2Problem will use minimum values
                     pass
             elif i > 0:
@@ -346,13 +308,13 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                     prev_profile = month_results[prev_group_last_day][0]
                     if prev_profile:
                         # Get the initial storage state (first timestep) of the last day from previous group
-                        initial_storage_state = extract_final_storage_state(prev_profile)
+                        initial_SoS = extract_final_storage_state(prev_profile)
             
             # Process the N-day group
             profiles_dict, max_values_dict, final_storage_state_prev_run = process_n_days(
                 group_days, design_key, base_wwtp_key, upgrade_key, tariff_key, new_param_vals,
                 baseline_val_dict, charge_dict_month, prev_demand_dict=prev_demand_dict,
-                initial_storage_state=initial_storage_state, horizon_days=horizon_days
+                initial_SoS=initial_SoS, horizon_days=horizon_days
             )
             
             if profiles_dict:
@@ -371,7 +333,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                         "new_param_vals": new_param_vals,
                         "max_values": max_values,
                         "prev_demand_dict": prev_demand_dict,
-                        "initial_storage_state": final_storage_state_prev_run,
+                        "initial_SoS": final_storage_state_prev_run,
                     }
                     intermediate_file = os.path.join(
                         intermediate_dir, f"{design_key}_{month_key}_{solved_day}.pkl"
@@ -395,7 +357,7 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
                         "new_param_vals": new_param_vals,
                         "max_values": {"Ndot_c": 0, "Edot_c": 0},
                         "prev_demand_dict": prev_demand_dict,
-                        "initial_storage_state": initial_storage_state,  # Preserve the storage state from previous horizon
+                        "initial_SoS": initial_SoS,  # Preserve the storage state from previous horizon
                         "failure_reason": "infeasible"
                     }
                     
@@ -433,13 +395,13 @@ def process_design_point_and_month(design_point_data, run_name, intermediate_fil
     print(f"Month {month_key} for design key {design_key} completed in {time.time() - month_start_time:.3f}s")
 
     return (
-        design_key,
         month_key,
         month_results,
         new_param_vals,
         is_feasible,
         failure_reason,
     )
+
 
 def is_valid_npv(npv):
     """Check if NPV is a valid finite number."""
@@ -479,7 +441,7 @@ def sample_from_multivariate_normal(all_designs, designs_per_run, o2_range, comp
             npvs.append(npv)
     
     if not points:
-        print('No points found')
+        print('No valid points generated for sampling. Stopping optimization.')
         return [], None
     
     points, npvs = np.array(points), np.array(npvs)
@@ -539,49 +501,11 @@ def sample_from_multivariate_normal(all_designs, designs_per_run, o2_range, comp
     return list(new_points), mu_sigma
 
 
-def calculate_capacity_factor(month_data, upgrade_key, new_param_vals):
-    """Calculate capacity factor based on storage type."""
-    if "battery" in upgrade_key:
-        storage_str = "E"
-    elif "tank" in upgrade_key:
-        storage_str = "N"
-
-    if storage_str in month_data["profiles"] and month_data["profiles"][storage_str]:
-        month_storage_profile = np.concatenate(month_data["profiles"][storage_str])
-        month_storage_max = new_param_vals[f"{storage_str}_max"]
-        return np.max(month_storage_profile) / month_storage_max
-    return 0.0  # if no tank
-
-
-def calculate_h2_metrics(month_data):
-    """Calculate H2-related metrics."""
-    if "Ndot_c" not in month_data["profiles"] or not month_data["profiles"]["Ndot_c"]:
-        return {"H2": 0, "h2_value": 0}
-
-    Ndot_c_profiles = np.concatenate(month_data["profiles"]["Ndot_c"])
-    h2_moles = np.sum(Ndot_c_profiles) * 2  # 2 moles H2 per mole O2
-    h2_kg = moles_to_mass(h2_moles, M_H2)
-    h2_value = h2_kg * price_h2_kg
-    return {"H2": h2_moles, "h2_value": h2_value}
-
-
-def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_vals):
+def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_vals, tariff_data):
     """Calculate monthly metrics including costs and energy metrics."""
     if not month_data["days"]:
         return {}, {}, {}
-    
-    # Get year, month explicitly from the first day
-    year, month = map(int, month_data["days"][0].split("-")[:2])
-    
-    # Load tariff data and get charge dict for this month
-    tariff_data = get_tariff_data()
-    if tariff_key not in tariff_data:
-        print(f"Warning: Tariff key {tariff_key} not found in tariff data")
-        return {}, {}, {}
-    
-    charge_dict = get_charge_dict_for_month(tariff_data[tariff_key], year, month)
 
-    # Check if we have any profiles
     if not month_data["profiles"]["Edot_t_net"]:
         return {}, {}, {}
 
@@ -592,6 +516,11 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_val
     # Initialize results
     opex = {"new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0}}
 
+    # Get year, month explicitly from the first day
+    year, month = map(int, month_data["days"][0].split("-")[:2])
+    charge_dict = get_charge_dict_for_month(tariff_data[tariff_key], year, month)
+
+    # Recalculate costs
     new_itemized_costs, _ = costs.calculate_itemized_cost(
         charge_dict,
         {"electric": profiles},
@@ -615,8 +544,9 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_val
         opex["savings"][key] = opex["baseline"][key] - opex["new"][key]
 
     # Initialize metrics dictionary
+    store_id = "E" if "battery" in upgrade_key else "N"
     monthly_metrics = {
-        "capacity_factor": calculate_capacity_factor(month_data, upgrade_key, new_param_vals),
+        "capacity_factor": np.max(np.concatenate(month_data["profiles"][store_id])) / new_param_vals[f"{store_id}_max"],
         "month_rte": metrics.roundtrip_efficiency(baseline_profiles, profiles),
         "energy_capacity": metrics.energy_capacity(
             baseline_profiles,
@@ -634,12 +564,15 @@ def calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_val
         ),
     }
 
-    # Add H2 metrics if applicable
+    # Add H2 to metrics if applicable
     if "elec" in upgrade_key:
-        h2_metrics = calculate_h2_metrics(month_data)
-        monthly_metrics["H2"] = h2_metrics["H2"]
-        opex["new"]["h2"] = -h2_metrics["h2_value"]
-        opex["savings"]["h2"] = h2_metrics["h2_value"]
+        Ndot_c_profiles = np.concatenate(month_data["profiles"]["Ndot_c"])
+        h2_moles = np.sum(Ndot_c_profiles) * 2  # 2 moles H2 per mole O2
+        h2_value = moles_to_mass(h2_moles, M_H2) * price_h2_kg
+        monthly_metrics["H2"] = h2_moles
+        opex["new"]["h2"] = -h2_value
+        opex["savings"]["h2"] = h2_value
+    
     return {
         "monthly_metrics": monthly_metrics,
         "opex": opex
@@ -699,14 +632,8 @@ def get_max_dict_from_profile(profile, demand_charge_info_dict):
     return prev_demand_dict
 
 
-def get_demand_charge_info_dict(tariff_key, month, year):
+def get_demand_charge_info_dict(tariff_key, month, year, tariff_data):
     """Get demand charge info dictionary for a given month"""
-    # Load tariff data for this tariff_key
-    tariff_data = get_tariff_data()
-    if tariff_key not in tariff_data:
-        print(f"Warning: Tariff key {tariff_key} not found in tariff data")
-        return {}
-    
     tariff_df = tariff_data[tariff_key]
     charge_dict = get_charge_dict_for_month(tariff_df, year, int(month))
 
@@ -740,6 +667,7 @@ def get_demand_charge_info_dict(tariff_key, month, year):
             "hour_end": match.iloc[0]["hour_end"],
         }
     return demand_charge_info_dict
+
 
 def get_baseline_param_vals(Ndot_target, Edot_rem, base_wwtp_key):
     """
@@ -776,22 +704,10 @@ def get_baseline_param_vals(Ndot_target, Edot_rem, base_wwtp_key):
         "P_b": P_b,
         "Edot_b_comp_coeff": Edot_b_comp_coeff
     }
-
-
-def get_remaining_new_param_vals_function(design_key, base_wwtp_key, upgrade_key, tariff_key, annual_param_limits):
-    # Create problem instance just to get param vals once per design
-    problem = O2Problem(
-        single_day_config=f"{base_wwtp_key}___{upgrade_key}___{tariff_key}",
-        design_key=design_key, date="dummy", data_wwtp='svcw',
-    )
-    param_vals = problem.get_remaining_new_param_vals(annual_param_limits)
-    del problem  # clean up memory
-    return param_vals
-    
+   
     
 def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_range,
-                    n_jobs, max_iterations, skip_already_run=True, horizon_days=3, convergence_threshold = 0.005
-):
+                    n_jobs, max_iterations, skip_already_run=True, horizon_days=3, convergence_threshold = 0.005):
     """Run optimization for a single configuration (combination of base facility, upgrade key, tariff key).
     
     Args:
@@ -870,6 +786,8 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
         if month_key not in month_to_days:
             month_to_days[month_key] = []
         month_to_days[month_key].append(date)
+
+    tariff_data = get_tariff_data()
 
     gas, o2_tech_base, summer_multiplier, summer_smoothing = split_key(base_wwtp_key)
 
@@ -969,7 +887,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             initial_design_points = [(round(hours, 2), round(ratio, 1)) for hours, ratio in initial_design_points]
 
     # Initialize results storage
-    mu_sigma_history = []
+    mu_sigma_history = [None]
     sampled_points_history = []
     iteration = 0
     infeasible_designs = set()
@@ -989,21 +907,18 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
         # Get design points for this iteration
         if iteration == 0:
             design_points = initial_design_points
-            mu_sigma_history.append(None)  # No mu/sigma for initial points
+            # mu_sigma_history.append(None)  # No mu/sigma for initial points
         else:
             # Sample new points using MVN
             design_points, mu_sigma = sample_from_multivariate_normal(all_results, designs_per_run, o2_range, comp_ratio_range, upgrade_key)
             if not design_points:
-                print("No valid points generated for sampling. Stopping optimization.")
                 break
             
             mu_sigma_history.append(mu_sigma)
 
-        # Track which points were sampled this iteration
         sampled_points_history.append(list(design_points))
-        unsolved_points = [
-            pt for pt in design_points if f"{pt[0]}__{pt[1]}" not in all_results
-        ]
+        unsolved_points = [pt for pt in design_points if f"{pt[0]}__{pt[1]}" not in all_results]
+        
         if not unsolved_points:
             print("All sampled design points solved. Next iteration.")
             iteration += 1
@@ -1018,12 +933,13 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             ],
             default=-np.inf,
         )
+
         if iteration >= min_iterations and current_best_npv > best_npv:
-            improvement = (
-                (current_best_npv - best_npv) / abs(best_npv)
-                if best_npv != -np.inf
-                else np.inf
-            )
+            if best_npv != -np.inf:
+                improvement = (current_best_npv - best_npv) / abs(best_npv)
+            else:
+                improvement = np.inf
+
             if improvement < convergence_threshold:
                 no_improvement_count += 1
                 if no_improvement_count >= 2:
@@ -1034,6 +950,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                 no_improvement_count = 0
                 print(f"Current best NPV: ${current_best_npv:,.2f}, continuing")
             best_npv = current_best_npv
+
         # Sort design points by hours (descending) and create job queue with design point-month combinations
         sorted_unsolved_points = sorted(unsolved_points, key=lambda x: x[0], reverse=True)
         print(f"  Creating job queue from {len(sorted_unsolved_points)} unsolved points")
@@ -1051,9 +968,9 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                             day_data = pickle.load(f)
                             if not day_data.get("profile") or "Edot_t_net" not in day_data.get("profile", {}):
                                 failed_days += 1
-                    if failed_days > total_days / 2:
+                    if failed_days >= 4:
                         infeasible_designs.add(design_key)
-                        print(f"  Marking {design_key} as infeasible based on intermediate files ({failed_days}/{total_days} failed days in {month_key})")
+                        print(f"  Marking {design_key} as infeasible based on intermediate files ({failed_days} failed days in {month_key})")
                         break
         
         # Second pass: apply hierarchical pruning - if a larger design fails, all smaller designs are infeasible
@@ -1075,10 +992,13 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             if design_key in infeasible_designs:
                 skipped_count += 1
                 continue
-                
-            new_param_vals = get_remaining_new_param_vals_function(
-                design_key, base_wwtp_key, upgrade_key, tariff_key, annual_param_limits
-                )
+            
+            # Create problem instance just to get param vals once per design
+            problem = O2Problem(
+                single_day_config=get_config_name(base_wwtp_key, upgrade_key, tariff_key), design_key=design_key
+            )
+            new_param_vals = problem.get_remaining_new_param_vals(annual_param_limits)
+            del problem  # clean up memory
 
             for month_key, month_days in month_to_days.items():
                 job_queue.append((design_key, month_key, month_days, base_wwtp_key, upgrade_key, tariff_key,
@@ -1111,7 +1031,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                 
                 # Submit job
                 async_result = pool.apply_async(process_design_point_and_month, 
-                                                args=(job_data, run_name, intermediate_filepaths, horizon_days))
+                                                args=(job_data, run_name, tariff_data, intermediate_filepaths, horizon_days))
                 pending_jobs[async_result] = (job_index, design_key)
                 job_index += 1
             
@@ -1124,12 +1044,12 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                         result = async_result.get()
                         results.append(result)
                         
-                        if result and len(result) >= 6:
-                            month_key = result[1]
-                            month_results = result[2]  # month_results
-                            new_param_vals = result[3]
-                            is_feasible = result[4]  # is_feasible
-                            failure_reason = result[5]  # failure_reason
+                        if result and len(result) >= 5:
+                            month_key = result[0]
+                            month_results = result[1]  # month_results
+                            new_param_vals = result[2]
+                            is_feasible = result[3]  # is_feasible
+                            failure_reason = result[4]  # failure_reason
 
                             if not is_feasible:
                                 infeasible_designs.add(design_key)
@@ -1146,7 +1066,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                                 continue
                             
                             async_result = pool.apply_async(process_design_point_and_month, 
-                                                            args=(job_data, run_name, intermediate_filepaths, horizon_days))
+                                                            args=(job_data, run_name, tariff_data, intermediate_filepaths, horizon_days))
                             pending_jobs[async_result] = (job_index, design_key)
                             job_index += 1
                             break
@@ -1159,20 +1079,11 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             if not design_results:
                 continue
 
-            # Aggregate results for this design point
             monthly_data = {}
             monthly_max_values = {}
             month_failures = {}
             design_failed = False  # Flag to track if design should be skipped
-
-            for (
-                design_key_from_result,
-                month_key,
-                month_results,
-                new_param_vals,
-                is_feasible,
-                failure_reason,
-            ) in design_results:
+            for (month_key, month_results, new_param_vals, is_feasible, failure_reason) in design_results:
                 # Check if this month indicates design failure
                 if not is_feasible:
                     print(f"  ✗ Design {design_key} failed in {month_key}: {failure_reason}")
@@ -1181,14 +1092,11 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                         "metrics": {
                             "npv": {
                                 "total": -np.inf,
-                                "by_component": {"energy": -np.inf, "demand": -np.inf, "export": -np.inf, "h2": -np.inf
-                                }
+                                "by_component": {k: -np.inf for k in ["energy", "demand", "export", "h2"]}
                             },
-                            "capex": np.inf,
-                            "tank_metrics": None,
+                            "capex": np.inf, "tank_metrics": None,
                         },
-                        "new_param_vals": new_param_vals,
-                        "infeasibility_reason": failure_reason,
+                        "new_param_vals": new_param_vals, "infeasibility_reason": failure_reason,
                     }
                     design_failed = True
                     break  # Exit month loop
@@ -1249,25 +1157,21 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                 for name in ["new", "baseline", "savings"]
             }
             metric_lists = {
-                k: []
-                for k in [
-                    "month_rte",
-                    "energy_capacity",
-                    "month_power_capacity",
-                    "capacity_factor",
-                ]
+                k: [] for k in ["month_rte", "energy_capacity", "month_power_capacity", "capacity_factor"]
             }
 
             for month_key, month_data in monthly_data.items():
-                complete_monthly_data = calculate_monthly_metrics(
-                    month_data, tariff_key, upgrade_key, new_param_vals
-                )
+
+                complete_monthly_data = calculate_monthly_metrics(month_data, tariff_key, upgrade_key, new_param_vals, tariff_data)
+
                 if not complete_monthly_data["opex"]:
                     print(f"  Skipping metrics calculation for {month_key} due to empty monthly_opex")
                     continue
+
                 for name in ["new", "baseline", "savings"]:
                     for k in opex_keys:
                         annual_opex[name][k] += complete_monthly_data["opex"][name][k]
+
                 for k in metric_lists:
                     metric_lists[k].append(complete_monthly_data["monthly_metrics"][k])
 

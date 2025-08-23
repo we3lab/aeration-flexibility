@@ -232,5 +232,8 @@ def get_summer_key(multiplier, smoothing):
     return summer_key
 
 
-def get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix):
-    return f"{base_wwtp_key}___{upgrade_key}___{tariff_key}___{suffix}"
+def get_config_name(base_wwtp_key, upgrade_key, tariff_key, suffix=None):
+    if suffix:
+        return f"{base_wwtp_key}___{upgrade_key}___{tariff_key}___{suffix}"
+    else:
+        return f"{base_wwtp_key}___{upgrade_key}___{tariff_key}"

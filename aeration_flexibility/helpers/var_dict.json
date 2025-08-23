@@ -32,8 +32,7 @@
       "Edot_t_baseline": {"domain": "Reals"},
       "Ndot_target": {"domain": "NonNegativeReals"},
       "Edot_rem": {"domain": "Reals"},
-      "hourly_solar_multiplier": {"domain": "NonNegativeReals"},
-      "total_fng": {"domain": "NonNegativeReals"}
+      "hourly_solar_multiplier": {"domain": "NonNegativeReals"}
     },
     "non_indexed": {
       "storage": {
