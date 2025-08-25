@@ -872,23 +872,10 @@ def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None
             config_data = pickle.load(f)
         all_results, best_design_key = get_design_data(config_data)     
         design_data = all_results[best_design_key]
-        
-        # Get first available day data from intermediate files
-        month_profiles = design_data["month_profiles"]
-        first_month_key = next(iter(month_profiles.keys()))
-        first_month_data = month_profiles[first_month_key]
-        available_keys = first_month_data["days"]
-        
-        if not available_keys:
-            raise ValueError("No profile data available")
-        if day is None:
-            day_key = available_keys[0]
-            print(f"No specific date requested, using first available: {day_key}")
-        else:
-            day_key = next((key for key in available_keys if day in key), available_keys[0])
 
         intermediate_dir = f"aeration_flexibility/output_data/{run_name}/intermediate/{config_key}"
-        intermediate_file = os.path.join(intermediate_dir, f"{design_key}_{first_month_key}_{day_key}.pkl")
+        matching_files = glob.glob(os.path.join(intermediate_dir, f"{best_design_key}_*_{day}.pkl"))
+        intermediate_file = matching_files[0]
         with open(intermediate_file, 'rb') as f:
             day_data = pickle.load(f)
             day_data = day_data["profile"]
@@ -1437,7 +1424,8 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
         si_cem_figure(results, run_name, output_dir)
 
     if figure_2:
-        figure_2_function(run_name, suffix, None, npv_data=consolidate_npv_data(results, {}),
+        day = '2022-07-01'
+        figure_2_function(run_name, suffix, day, npv_data=consolidate_npv_data(results, {}),
         location_lookup=location_lookup, results=results)
 
     if figure_4:

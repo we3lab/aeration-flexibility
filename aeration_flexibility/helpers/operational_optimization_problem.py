@@ -125,7 +125,7 @@ class O2Problem:
                 else min(Ndot_target_min, (1 - compressor_turndown) * Ndot_b_max)
             ),
             "Ndot_r_max": 0 if self.is_battery else annual_param_limits["Ndot_target_max"],
-            "Ndot_c_max": 0 if self.is_battery else N_max/1,  # (limit / 1 hour)
+            "Ndot_c_max": 0 if (self.is_battery or self.has_surplus) else N_max/1,  # (limit / 1 hour)
             "unmet_o2_max": Ndot_b_max / 10,
             # Energy parameters
             "Edot_t_max": annual_param_limits["Edot_t_max"],
@@ -469,34 +469,38 @@ class O2Problem:
             print(f"{self.design_key} {self.date} Returning zeros because Edot_t.extract_values() is None")
             return {key: np.zeros(self.var_length) for key in sub_profile_columns}
 
-        unmet_values = self.vp.unmet_o2.extract_values()
-        if max(unmet_values.values()) > 10.0:
-            print(f"{self.design_key} {self.date} Returning zeros because there is significant unmet o2")
-            print(np.max(self.vp.unmet_o2.extract_values()))
-            print(f'Ndot_b max: {max(self.vp.Ndot_b.extract_values())}')
-            print(f'Ndot_b_aer max: {max(self.vp.Ndot_b_aer.extract_values())}')
-            print(f'Ndot_b_excess max: {max(self.vp.Ndot_b_excess.extract_values())}')
-            print(f'Ndot_b_max: {self.vp.Ndot_b_max.extract_values()}')
-            print(f'Edot_b max: {max(self.vp.Edot_b.extract_values())}')
-            print(f'Edot_c max: {max(self.vp.Edot_c.extract_values())}')
-            print(f'Edot_c_max: {self.vp.Edot_c_max.extract_values()}')
-            return {key: np.zeros(self.var_length) for key in sub_profile_columns}
-
-        profile_dict = {
-            column: pd.Series(
-                {
-                    k: v if v is not None else 0
-                    for k, v in getattr(self.vp, column).extract_values().items()
-                },
-                index=getattr(self.vp, column).extract_values().keys(),
+        profile_dict = {}
+        for column in sub_profile_columns:
+            profile_dict[column] = pd.Series(
+                getattr(self.vp, column).extract_values(),
+                index=getattr(self.vp, column).extract_values().keys()
             )
-            for column in sub_profile_columns
-        }
 
         baseline_values = [pyo.value(self.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
         values = [pyo.value(self.vp.Edot_t_net[t]) for t in range(self.var_length)]
         print(f"{self.design_key} {self.date} Edot_t_net: {round(min(values))}-{round(max(values))}, Edot_t_baseline: {round(min(baseline_values))}-{round(max(baseline_values))}, cost {round(self.vp.tariff_cost.value)}")
         
+        unmet_values = self.vp.unmet_o2.extract_values()
+        if max(unmet_values.values()) > 10.0:
+            print(f"{self.design_key} {self.date} Returning zeros because there is significant unmet o2")
+            print(f'unmet o2 max: {max(self.vp.unmet_o2.extract_values().values())}')
+            print(f'Ndot_target max: {max(self.vp.Ndot_target.extract_values().values())}')
+            print(f'Ndot_b max: {max(self.vp.Ndot_b.extract_values().values())}')
+            print(f'Ndot_b_aer max: {max(self.vp.Ndot_b_aer.extract_values().values())}')
+            print(f'Ndot_b_excess max: {max(self.vp.Ndot_b_excess.extract_values().values())}')
+            print(f'Ndot_c max: {max(self.vp.Ndot_c.extract_values().values())}')
+            print(f'Ndot_r max: {max(self.vp.Ndot_r.extract_values().values())}')
+            print(f'Ndot_b_max: {self.vp.Ndot_b_max.extract_values().values()}')
+            print(f'Edot_b max: {max(self.vp.Edot_b.extract_values().values())}')
+            print(f'Edot_b_gen max: {max(pyo.value(self.vp.Edot_b_gen[t]) for t in range(self.var_length))}')
+            print(f'Edot_b_comp max: {max(pyo.value(self.vp.Edot_b_comp[t]) for t in range(self.var_length))}')
+            print(f'Edot_b_excess max: {max(pyo.value(self.vp.Edot_b_excess[t]) for t in range(self.var_length))}')
+            print(f'Edot_c max: {max(self.vp.Edot_c.extract_values().values())}')
+            print(f'Edot_c_max: {self.vp.Edot_c_max.extract_values().values()}')
+            print(f'Edot_t_max: {self.vp.Edot_t_max.extract_values().values()}')
+            
+            profile_dict["Edot_t_net"] = pd.Series([1e8] * self.var_length, index=range(self.var_length))
+
         return profile_dict
 
     def solve_optimization_day(self, tee=False):
@@ -509,6 +513,7 @@ class O2Problem:
             solve_time = time.time() - start_time
 
             if results.solver.termination_condition == pyo.TerminationCondition.optimal:
+                print(pyo.TerminationCondition)
                 return self.get_profile()
             elif (
                 results.solver.termination_condition
