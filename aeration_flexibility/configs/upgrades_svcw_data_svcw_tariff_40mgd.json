@@ -22,7 +22,7 @@
     "comp_ratio_range": [10.0, 700.0],
     "designs_per_run": 10,
     "max_iterations": 5,
-    "n_jobs": 31
+    "n_jobs": 14
   },
   "script_settings": {
     "run_ingest_data": false,

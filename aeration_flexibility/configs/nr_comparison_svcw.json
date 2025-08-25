@@ -48,7 +48,7 @@
     "ingest_gas": "air"
   },
   "design_space": {
-    "o2_range": [0.5, 48.0],
+    "o2_range": [1.0, 48.0],
     "comp_ratio_range": [10.0, 700.0],
     "designs_per_run": 5,
     "max_iterations": 2,

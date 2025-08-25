@@ -323,7 +323,7 @@ def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, n
         storage_cost = get_liquid_tank_cost(sub_dict["param_vals"]["N_max"])
     elif storage_type == "battery":
         E_max = sub_dict["param_vals"]["E_max"]
-        max_Edot_c = sub_dict["param_vals"]["max_Edot_c"] + 1e-4
+        max_Edot_c = sub_dict["max_values"]["Edot_c"] + 1e-4
         storage_cost = battery_system_cost(E_max, max_Edot_c)
     # Hydrogen storage cost
     h2_storage_cost = 0

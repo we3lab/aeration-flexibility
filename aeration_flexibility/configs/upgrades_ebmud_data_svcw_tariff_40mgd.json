@@ -13,20 +13,20 @@
   },
   "tariff_keys_to_run": ["0.0__svcw"],
   "data_ingestion": {
-    "shorten_months_run": 1,
+    "shorten_months_run": 6,
     "scale_factor": 2.963,
     "ingest_gas": "o2"
   },
   "design_space": {
-    "o2_range": [0.05, 3.0],
+    "o2_range": [0.05, 5.0],
     "comp_ratio_range": [10.0, 700.0],
     "designs_per_run": 10,
     "max_iterations": 5,
-    "n_jobs": 31
+    "n_jobs": 20
   },
   "script_settings": {
     "run_ingest_data": false,
-    "run_solve_optimization": false,
+    "run_solve_optimization": true,
     "run_plotting": true,
     "figure_2": true,
     "figure_4": false,

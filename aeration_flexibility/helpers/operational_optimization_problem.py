@@ -30,17 +30,15 @@ profile_columns = [
 
 class O2Problem:
 
-    def __init__(self, design_key, single_day_config=None, date=None, 
-                 initial_SoS=None, data_wwtp=None, horizon_days=3):
+    def __init__(self, design_key, prob_name=None, date=None, 
+                 initial_SoS=None, data_wwtp=None, horizon_days=3, var_length=None):
         """Initialize the O2Problem with design parameters and constraints."""
         
         # Parse configuration
-        self.base_key, self.upgrade_key, self.tariff_key = single_day_config.split(
+        self.base_key, self.upgrade_key, self.tariff_key = prob_name.split(
             "___"
         )
-        self.gas, self.o2_tech_base, summer_multiplier, summer_smoothing = split_key(
-            self.base_key
-        )
+        self.gas, self.o2_tech_base, _, _ = split_key(self.base_key)
 
         self.o2_tech_upgrade = (
             self.upgrade_key.split("__")[0] if self.upgrade_key else None
@@ -50,10 +48,8 @@ class O2Problem:
             if self.o2_tech_upgrade != "none"
             else self.o2_tech_base
         )
-        self.storage_type = (
-            self.upgrade_key.split("__")[1] if self.upgrade_key else None
-        )
-        self.nu_rec = self.upgrade_key.split("__")[2] if self.upgrade_key else None
+        self.storage_type = self.upgrade_key.split("__")[1]
+        self.nu_rec = self.upgrade_key.split("__")[2]
         self.design_key = design_key
         self.date = date
         self.initial_SoS = initial_SoS
@@ -68,14 +64,14 @@ class O2Problem:
         self.is_tank = self.is_liquid_tank or self.is_gas_tank
 
         self.horizon_days = horizon_days
-        self.var_length = horizon_days*96
-
-        self.cost_kwargs = {
-            "desired_utility": "electric",
-            "demand_scale_factor": self.var_length/(30*96),
-            "resolution": '15m',
-            "decompose_exports": True
-        }
+        if var_length:
+            self.var_length = var_length
+            self.cost_kwargs = {
+                "desired_utility": "electric",
+                "demand_scale_factor": self.var_length/(30*96),
+                "resolution": '15m',
+                "decompose_exports": True
+            }
 
         self.m = pyo.ConcreteModel(
             name=f"{self.base_key}____{self.upgrade_key}___{self.design_key}___{date}"
@@ -154,10 +150,8 @@ class O2Problem:
             "frac_o2": frac_o2_map[self.gas],
             # Solar parameters
             "solar_multiplier": solar_multiplier,
-            "hourly_solar_multiplier": (
-                hourly_solar_multiplier_default
-                if solar_multiplier == 1.0
-                else np.ones(self.var_length)
+            "hourly_solar_multiplier": (hourly_solar_multiplier_default if solar_multiplier == 1.0
+                else np.ones(self.horizon_days * 96)
             ),
             "Edot_c_comp_h2_coeff": (
                 compressor_power_linear_coeff(P_init, 35, rec=False)
@@ -171,18 +165,18 @@ class O2Problem:
         vals = {**baseline_vals, **new_vals}
         self.m.t = pyo.Set(initialize=range(int(self.var_length)))
         self.m.vp = pyo.Block()
-        # self.vp = self.m.vp
+        self.vp = self.m.vp
 
         # Create parameters
         for param_name in self.var_dict["parameters"]["indexed"]:
             domain = pyo.Reals if self.var_dict["parameters"]["indexed"][param_name]["domain"] == "Reals" else pyo.NonNegativeReals
             param = pyo.Param(range(self.var_length), domain=domain, mutable=True, default=0)
-            setattr(self.m.vp, param_name, param)
+            setattr(self.vp, param_name, param)
             
             # Handling for parameters that need to be extended for n-day optimization
-            if param_name in ["hourly_solar_multiplier"] and isinstance(vals[param_name], np.ndarray) and len(vals[param_name]) == 96:
-                # Repeat the 96-hour pattern n times
-                extended_vals = np.tile(vals[param_name], self.horizon_days)
+            if param_name=="hourly_solar_multiplier" and isinstance(vals[param_name], np.ndarray):
+                # Repeat the 96-hour pattern 5 times and take first var_length entries
+                extended_vals = np.tile(vals[param_name], 5)[:self.var_length]
                 for idx in range(self.var_length):
                     param[idx] = float(extended_vals[idx])
             else:
@@ -197,7 +191,7 @@ class O2Problem:
             for param_name in category:
                 domain = pyo.Reals if category[param_name]["domain"] == "Reals" else pyo.NonNegativeReals
                 param = pyo.Param(domain=domain, mutable=True, default=0)
-                setattr(self.m.vp, param_name, param)
+                setattr(self.vp, param_name, param)
                 param.set_value(float(vals[param_name]))
 
         # Create variables
@@ -206,9 +200,9 @@ class O2Problem:
             ub = None if props["bounds"][1] is None else props["bounds"][1]
 
             if isinstance(lb, str):
-                lb = getattr(self.m.vp, lb)
+                lb = getattr(self.vp, lb)
             if isinstance(ub, str):
-                ub = getattr(self.m.vp, ub)
+                ub = getattr(self.vp, ub)
 
             domain_str = props.get("domain", "NonNegativeReals")
             domain = pyo.Reals if domain_str == "Reals" else pyo.NonNegativeReals
@@ -218,7 +212,7 @@ class O2Problem:
             else:
                 var = pyo.Var(domain=domain, bounds=(lb, ub))
 
-            setattr(self.m.vp, name, var)
+            setattr(self.vp, name, var)
 
         # Create base variables
         for name, props in self.var_dict["variables"]["base"].items():
@@ -245,24 +239,24 @@ class O2Problem:
     def initialize_vars(self):
         printed = False
         for t in range(self.var_length):
-            if self.m.vp.Ndot_target[t].value < 1.0:
+            if self.vp.Ndot_target[t].value < 1.0:
                 if not printed:
                     print(f"Warning: Ndot_target <1.0 at time {t} for {self.date}. Setting to 1.0")
                     printed = True
-                self.m.vp.Ndot_target[t].set_value(1.0)
+                self.vp.Ndot_target[t].set_value(1.0)
 
             
             # 1. Initialize flow variables to match baseline blower operation
-            blower_val = min(pyo.value(self.m.vp.Ndot_b_max), pyo.value(self.m.vp.Ndot_target[t]))
-            self.m.vp.Ndot_b_aer[t].set_value(blower_val)
-            self.m.vp.Ndot_b_excess[t].set_value(0)
-            self.m.vp.Ndot_b[t].set_value(blower_val)
+            blower_val = min(pyo.value(self.vp.Ndot_b_max), pyo.value(self.vp.Ndot_target[t]))
+            self.vp.Ndot_b_aer[t].set_value(blower_val)
+            self.vp.Ndot_b_excess[t].set_value(0)
+            self.vp.Ndot_b[t].set_value(blower_val)
             
             # 2. Initialize storage flow variables to zero, or filling the gap of missing capacity
             if self.is_tank:
-                gap = max(0, pyo.value(self.m.vp.Ndot_target[t]) - pyo.value(self.m.vp.Ndot_b_max))
-                self.m.vp.Ndot_r[t].set_value(gap)
-                self.m.vp.Ndot_c[t].set_value(0)
+                gap = max(0, pyo.value(self.vp.Ndot_target[t]) - pyo.value(self.vp.Ndot_b_max))
+                self.vp.Ndot_r[t].set_value(gap)
+                self.vp.Ndot_c[t].set_value(0)
 
     def construct_constraints(self, charge_dict, prev_demand_dict):
         # Collect all constraint rules, then add constraints
@@ -299,97 +293,97 @@ class O2Problem:
 
         # Create base expressions for use in base constraints
         base_expression_rules = {
-            'Edot_b_comp': lambda m, t: self.m.vp.Edot_b_comp_coeff * self.m.vp.Ndot_b_aer[t] / self.m.vp.frac_o2,
-            'Edot_b_gen': lambda m, t: self.m.vp.ei_o2_base * self.m.vp.Ndot_b_aer[t],
-            'Edot_b_excess': lambda m, t: self.m.vp.Edot_b_comp_coeff * self.m.vp.Ndot_b_excess[t] / self.m.vp.frac_o2 + self.m.vp.ei_o2_base * self.m.vp.Ndot_b_excess[t]
+            'Edot_b_comp': lambda m, t: self.vp.Edot_b_comp_coeff * self.vp.Ndot_b_aer[t] / self.vp.frac_o2,
+            'Edot_b_gen': lambda m, t: self.vp.ei_o2_base * self.vp.Ndot_b_aer[t],
+            'Edot_b_excess': lambda m, t: self.vp.Edot_b_comp_coeff * self.vp.Ndot_b_excess[t] / self.vp.frac_o2 + self.vp.ei_o2_base * self.vp.Ndot_b_excess[t]
         }
         for name, rule in base_expression_rules.items():
-            setattr(self.m.vp, name, pyo.Expression(range(self.var_length), rule=rule))
+            setattr(self.vp, name, pyo.Expression(range(self.var_length), rule=rule))
 
         for t in range(self.var_length):
             next_t = t + 1
-            rules[f"blower_power_{t}"] = self.m.vp.Edot_b[t] == self.m.vp.Edot_b_comp[t] + self.m.vp.Edot_b_gen[t]
-            rules[f"excess_o2_{t}"] = self.m.vp.Ndot_b[t] == self.m.vp.Ndot_b_aer[t] + self.m.vp.Ndot_b_excess[t]
-            rules[f"total_energy_balance_net_day1_t{t}"] = self.m.vp.Edot_t_net[t] == self.m.vp.Edot_t[t] - self.m.vp.Edot_c[t] * self.m.vp.solar_multiplier
-            rules[f"solar_limit_{t}"] = self.m.vp.Edot_c[t] <= self.m.vp.Edot_t_max * self.m.vp.hourly_solar_multiplier[t] + 1e-3
+            rules[f"blower_power_{t}"] = self.vp.Edot_b[t] == self.vp.Edot_b_comp[t] + self.vp.Edot_b_gen[t]
+            rules[f"excess_o2_{t}"] = self.vp.Ndot_b[t] == self.vp.Ndot_b_aer[t] + self.vp.Ndot_b_excess[t]
+            rules[f"total_energy_balance_net_day1_t{t}"] = self.vp.Edot_t_net[t] == self.vp.Edot_t[t] - self.vp.Edot_c[t] * self.vp.solar_multiplier
+            rules[f"solar_limit_{t}"] = self.vp.Edot_c[t] <= self.vp.Edot_t_max * self.vp.hourly_solar_multiplier[t] + 1e-3
 
             if next_t < self.var_length:
-                rules[f"ramp_rate_up_{t}"] = self.m.vp.Edot_c[next_t] - self.m.vp.Edot_c[t] <= self.m.vp.Edot_t_max.value * 0.4
+                rules[f"ramp_rate_up_{t}"] = self.vp.Edot_c[next_t] - self.vp.Edot_c[t] <= self.vp.Edot_t_max.value * 0.4
 
     def _collect_o2_storage_constraints(self, rules):
 
          # Create expressions for use in o2 storage constraints
         o2_storage_expression_rules = {
-            'Edot_c_gen': lambda m, t: self.m.vp.ei_o2_new * self.m.vp.Ndot_c[t] + 1e-4,
-            'Edot_c_comp': lambda m, t: compressor_power(self.m.vp.Ndot_c[t] / self.m.vp.frac_o2, self.m.vp.P_init, self.m.vp.P[t], self.m.vp.eta_comp, gas=self.gas, rec=False) if self.is_gas_tank else 0,
-            'Edot_c_comp_h2': lambda m, t: self.m.vp.Ndot_c[t] * self.m.vp.y_h2 * self.m.vp.Edot_c_comp_h2_coeff if self.is_gas_tank else 0
+            'Edot_c_gen': lambda m, t: self.vp.ei_o2_new * self.vp.Ndot_c[t] + 1e-4,
+            'Edot_c_comp': lambda m, t: compressor_power(self.vp.Ndot_c[t] / self.vp.frac_o2, self.vp.P_init, self.vp.P[t], self.vp.eta_comp, gas=self.gas, rec=False) if self.is_gas_tank else 0,
+            'Edot_c_comp_h2': lambda m, t: self.vp.Ndot_c[t] * self.vp.y_h2 * self.vp.Edot_c_comp_h2_coeff if self.is_gas_tank else 0
         }
         for name, rule in o2_storage_expression_rules.items():
-            setattr(self.m.vp, name, pyo.Expression(range(self.var_length), rule=rule))
+            setattr(self.vp, name, pyo.Expression(range(self.var_length), rule=rule))
 
         # Add initial storage state constraints
         if self.initial_SoS is not None:
-            rules["initial_storage_moles"] = self.m.vp.N[0] == self.initial_SoS['N']
+            rules["initial_storage_moles"] = self.vp.N[0] == self.initial_SoS['N']
         else:
-            rules["initial_storage_moles_min"] = self.m.vp.N[0] == self.m.vp.N_min
+            rules["initial_storage_moles_min"] = self.vp.N[0] == self.vp.N_min
 
         # Timestep constraints
         for t in range(self.var_length):
             next_t = t + 1
             self._collect_o2_mass_balance_constraints(t, next_t, rules)
-            if self.is_gas_tank and self.m.vp.V_tank.value > 0:
+            if self.is_gas_tank and self.vp.V_tank.value > 0:
                 self._collect_gas_tank_timestep_constraints(t, rules)
             elif self.is_liquid_tank:
                 self._collect_liquid_tank_timestep_constraints(t, rules)
 
         # Add total_h2 constraint for gas tanks with electrolysis
         if self.is_gas_tank:
-            rules["total_h2"] = self.m.vp.total_h2 == sum(self.m.vp.Ndot_c[t_] * self.m.vp.y_h2 for t_ in range(self.var_length)) / timestep_factor
+            rules["total_h2"] = self.vp.total_h2 == sum(self.vp.Ndot_c[t_] * self.vp.y_h2 for t_ in range(self.var_length)) / timestep_factor
 
     def _collect_o2_mass_balance_constraints(self, t, next_t, rules):
         # Only add mass balance constraint if next_t is within bounds (no wraparound)
         if next_t < self.var_length:
-            rules[f"o2_storage_mass_balance_{t}"] = self.m.vp.N[next_t] == self.m.vp.N[t] + (self.m.vp.Ndot_c[t] + self.m.vp.Ndot_b_excess[t] - self.m.vp.Ndot_r[t]) / timestep_factor
+            rules[f"o2_storage_mass_balance_{t}"] = self.vp.N[next_t] == self.vp.N[t] + (self.vp.Ndot_c[t] + self.vp.Ndot_b_excess[t] - self.vp.Ndot_r[t]) / timestep_factor
         elif next_t == self.var_length:
             # Prevent "cheating" on the last timestep by fixing final storage state
-            rules[f"final_storage_state_{t}"] = self.m.vp.N[t] == self.m.vp.N[t-1]
+            rules[f"final_storage_state_{t}"] = self.vp.N[t] == self.vp.N[t-1]
             # Prevent recovery flow at the final timestep
-            rules[f"no_final_recovery_{t}"] = self.m.vp.Ndot_r[t] == 0
+            rules[f"no_final_recovery_{t}"] = self.vp.Ndot_r[t] == 0
 
-        rules[f"total_energy_balance_{t}"] = self.m.vp.Edot_t[t] == self.m.vp.Edot_rem[t] + self.m.vp.Edot_c[t] + self.m.vp.Edot_b[t] + self.m.vp.Edot_b_excess[t] + self.m.vp.Edot_r_o2[t] - self.m.vp.Edot_r[t]
-        rules[f"o2_mass_balance_with_unmet_{t}"] = self.m.vp.Ndot_target[t] == self.m.vp.Ndot_b_aer[t] + (1 - self.m.vp.l_o2) * self.m.vp.Ndot_r[t] + self.m.vp.unmet_o2[t]
-        rules[f"charge_energy_{t}"] = self.m.vp.Edot_c[t] == self.m.vp.Edot_c_gen[t] + self.m.vp.Edot_c_comp[t] + self.m.vp.Edot_c_comp_h2[t]
+        rules[f"total_energy_balance_{t}"] = self.vp.Edot_t[t] == self.vp.Edot_rem[t] + self.vp.Edot_c[t] + self.vp.Edot_b[t] + self.vp.Edot_b_excess[t] + self.vp.Edot_r_o2[t] - self.vp.Edot_r[t]
+        rules[f"o2_mass_balance_with_unmet_{t}"] = self.vp.Ndot_target[t] == self.vp.Ndot_b_aer[t] + (1 - self.vp.l_o2) * self.vp.Ndot_r[t] + self.vp.unmet_o2[t]
+        rules[f"charge_energy_{t}"] = self.vp.Edot_c[t] == self.vp.Edot_c_gen[t] + self.vp.Edot_c_comp[t] + self.vp.Edot_c_comp_h2[t]
 
     def _collect_gas_tank_timestep_constraints(self, t, rules):
-        rules[f"gas_storage_pressure_{t}"] = self.m.vp.P[t] == (self.m.vp.N[t] / self.m.vp.frac_o2) * R * T_room / (self.m.vp.V_tank * Pa_per_MPa)
-        rules[f"Edot_r_{t}"] = self.m.vp.Edot_r[t] == compressor_power(self.m.vp.Ndot_r[t] / self.m.vp.frac_o2, self.m.vp.P_min, self.m.vp.P[t], self.m.vp.nu_rec, gas=self.gas, rec=True)
-        rules[f"power_oxygen_rec_{t}"] = self.m.vp.Edot_r_o2[t] == 0
+        rules[f"gas_storage_pressure_{t}"] = self.vp.P[t] == (self.vp.N[t] / self.vp.frac_o2) * R * T_room / (self.vp.V_tank * Pa_per_MPa)
+        rules[f"Edot_r_{t}"] = self.vp.Edot_r[t] == compressor_power(self.vp.Ndot_r[t] / self.vp.frac_o2, self.vp.P_min, self.vp.P[t], self.vp.nu_rec, gas=self.gas, rec=True)
+        rules[f"power_oxygen_rec_{t}"] = self.vp.Edot_r_o2[t] == 0
 
     def _collect_liquid_tank_timestep_constraints(self, t, rules):
-        rules[f"power_oxygen_rec_{t}"] = self.m.vp.Edot_r_o2[t] == self.m.vp.ei_evap * self.m.vp.Ndot_r[t]
-        rules[f"power_rec_{t}"] = self.m.vp.Edot_r[t] == 0
+        rules[f"power_oxygen_rec_{t}"] = self.vp.Edot_r_o2[t] == self.vp.ei_evap * self.vp.Ndot_r[t]
+        rules[f"power_rec_{t}"] = self.vp.Edot_r[t] == 0
 
     def _collect_battery_constraints(self, rules):
         if self.initial_SoS is not None and 'E' in self.initial_SoS:
-            rules["initial_storage_energy"] = self.m.vp.E[0] == self.initial_SoS['E']
+            rules["initial_storage_energy"] = self.vp.E[0] == self.initial_SoS['E']
         else:
-            rules["initial_storage_energy_min"] = self.m.vp.E[0] == 0.0
+            rules["initial_storage_energy_min"] = self.vp.E[0] == 0.0
         
         for t in range(self.var_length):
-            rules[f"total_energy_balance_{t}"] = self.m.vp.Edot_t[t] == self.m.vp.Edot_c[t] + self.m.vp.Edot_b[t] + self.m.vp.Edot_b_excess[t] + self.m.vp.Edot_rem[t] - self.m.vp.Edot_r[t]
-            rules[f"meet_demand_{t}"] = self.m.vp.Ndot_target[t] == self.m.vp.Ndot_b_aer[t]
+            rules[f"total_energy_balance_{t}"] = self.vp.Edot_t[t] == self.vp.Edot_c[t] + self.vp.Edot_b[t] + self.vp.Edot_b_excess[t] + self.vp.Edot_rem[t] - self.vp.Edot_r[t]
+            rules[f"meet_demand_{t}"] = self.vp.Ndot_target[t] == self.vp.Ndot_b_aer[t]
             
             next_t = t + 1
             # Add battery energy balance constraint for points up to final point
             if next_t < self.var_length:
-                rules[f"battery_energy_balance_{t}"] = self.m.vp.E[next_t] == self.m.vp.E[t] + (self.m.vp.Edot_c[t] * pyo.sqrt(self.m.vp.eta_bat) - self.m.vp.Edot_r[t] / pyo.sqrt(self.m.vp.eta_bat)) / timestep_factor
+                rules[f"battery_energy_balance_{t}"] = self.vp.E[next_t] == self.vp.E[t] + (self.vp.Edot_c[t] * pyo.sqrt(self.vp.eta_bat) - self.vp.Edot_r[t] / pyo.sqrt(self.vp.eta_bat)) / timestep_factor
             elif next_t == self.var_length:  # fix final storage state - no "cheating"
-                rules[f"final_storage_state_{t}"] = self.m.vp.E[t] == self.m.vp.E[t-1]
+                rules[f"final_storage_state_{t}"] = self.vp.E[t] == self.vp.E[t-1]
 
     def _collect_cost_constraints(self, charge_dict, prev_demand_dict, rules):
         """Collect cost constraint rules."""
         consumption_data_dict = {
-            "electric": self.m.vp.Edot_t_net,
+            "electric": self.vp.Edot_t_net,
         }
         
         self.itemized_costs, self.m = costs.calculate_itemized_cost(
@@ -397,18 +391,18 @@ class O2Problem:
             consumption_data_dict=consumption_data_dict,
             model=self.m,
             prev_demand_dict=prev_demand_dict,
+            **self.cost_kwargs
         )
         
-        rules['total_cost'] = getattr(self.m.vp, 'tariff_cost') == self.itemized_costs["total"]
+        rules['total_cost'] = getattr(self.vp, 'tariff_cost') == self.itemized_costs["total"]
 
-        # Add h2 value
-        if self.is_gas_tank:
-            rules["h2_value"] = self.m.vp.h2_value == moles_to_mass(self.m.vp.total_h2, M_H2) * price_h2_kg
+        if self.is_gas_tank:  # Add h2 value
+            rules["h2_value"] = self.vp.h2_value == moles_to_mass(self.vp.total_h2, M_H2) * price_h2_kg
 
     def add_cost_constraints(self, charge_dict, prev_demand_dict=None):
         """Add cost constraints to the model."""
         consumption_data_dict = {
-            "electric": self.m.vp.Edot_t_net,
+            "electric": self.vp.Edot_t_net,
         }
         
         self.itemized_costs, self.m = costs.calculate_itemized_cost(
@@ -420,42 +414,43 @@ class O2Problem:
         
         self.m.cost_const.add_component(
                 'total cost',
-                pyo.Constraint(expr=getattr(self.m.vp, 'tariff_cost') == self.itemized_costs["total"]),
+                pyo.Constraint(expr=getattr(self.vp, 'tariff_cost') == self.itemized_costs["total"]),
             )
 
-        # Add h2 value
+        # Calculate h2 value
         if self.is_gas_tank:
             self.m.cost_const.add_component(
                 "h2_value",
                 pyo.Constraint(
-                    expr=self.m.vp.h2_value
-                    == moles_to_mass(self.m.vp.total_h2, M_H2) * price_h2_kg
+                    expr=self.vp.h2_value
+                    == moles_to_mass(self.vp.total_h2, M_H2) * price_h2_kg
                 ),
             )
 
     def _add_simul_penalty(self, obj_expr, charge_keys, discharge_keys):
         penalty_coeff=1e-5
         for t in range(self.var_length):
-            charge_sum = sum(getattr(self.m.vp, key)[t] for key in charge_keys)
-            discharge_sum = sum(getattr(self.m.vp, key)[t] for key in discharge_keys)
+            charge_sum = sum(getattr(self.vp, key)[t] for key in charge_keys)
+            discharge_sum = sum(getattr(self.vp, key)[t] for key in discharge_keys)
             obj_expr += penalty_coeff * (charge_sum + discharge_sum)
         return obj_expr
     
     def construct_objective(self):
-        obj_expr = self.m.vp.tariff_cost
+        obj_expr = self.vp.tariff_cost
         
-        if self.is_gas_tank:
-            obj_expr -= self.m.vp.h2_value
+        if self.is_gas_tank:  # Subtract h2 value
+            obj_expr -= self.vp.h2_value
         
         # Penalty for unmet oxygen demand
-        unmet_penalty = sum(self.m.vp.unmet_o2[t] for t in range(self.var_length)) * 1e-1
+        unmet_penalty = sum(self.vp.unmet_o2[t] for t in range(self.var_length))
         obj_expr += unmet_penalty
         
         # Penalty for simultaneous charge / discharge
-        if 'tank' in self.storage_type:
-            obj_expr = self._add_simul_penalty(obj_expr, charge_keys=['Ndot_c', 'Ndot_b_excess'], discharge_keys=['Ndot_r'])
-        else:
-            obj_expr = self._add_simul_penalty(obj_expr, charge_keys=['Edot_c'], discharge_keys=['Edot_r'])
+        obj_expr = self._add_simul_penalty(
+            obj_expr,
+            charge_keys=['Ndot_c', 'Ndot_b_excess'] if self.is_tank else ['Edot_c'], 
+            discharge_keys=['Ndot_r'] if self.is_tank else ['Edot_r']
+            )
 
         self.m.obj = pyo.Objective(expr=obj_expr, sense=pyo.minimize)
         return self.m
@@ -468,33 +463,40 @@ class O2Problem:
         return self.m
 
     def get_profile(self):
-        sub_profile_columns = [column for column in self.profile_columns if column in self.m.vp.__dict__]
+        sub_profile_columns = [column for column in self.profile_columns if column in self.vp.__dict__]
 
-        if self.m.vp is None:
-            print(f"{self.design_key} {self.date} Returning zeros because self.m.vp is None")
-            return {key: np.zeros(self.var_length) for key in sub_profile_columns}
-
-        if self.m.vp.Edot_t.extract_values() is None:
+        if self.vp.Edot_t.extract_values() is None:
             print(f"{self.design_key} {self.date} Returning zeros because Edot_t.extract_values() is None")
             return {key: np.zeros(self.var_length) for key in sub_profile_columns}
-        unmet_values = self.m.vp.unmet_o2.extract_values()
+
+        unmet_values = self.vp.unmet_o2.extract_values()
         if max(unmet_values.values()) > 10.0:
             print(f"{self.design_key} {self.date} Returning zeros because there is significant unmet o2")
+            print(np.max(self.vp.unmet_o2.extract_values()))
+            print(f'Ndot_b max: {max(self.vp.Ndot_b.extract_values())}')
+            print(f'Ndot_b_aer max: {max(self.vp.Ndot_b_aer.extract_values())}')
+            print(f'Ndot_b_excess max: {max(self.vp.Ndot_b_excess.extract_values())}')
+            print(f'Ndot_b_max: {self.vp.Ndot_b_max.extract_values()}')
+            print(f'Edot_b max: {max(self.vp.Edot_b.extract_values())}')
+            print(f'Edot_c max: {max(self.vp.Edot_c.extract_values())}')
+            print(f'Edot_c_max: {self.vp.Edot_c_max.extract_values()}')
             return {key: np.zeros(self.var_length) for key in sub_profile_columns}
 
         profile_dict = {
             column: pd.Series(
                 {
                     k: v if v is not None else 0
-                    for k, v in getattr(self.m.vp, column).extract_values().items()
+                    for k, v in getattr(self.vp, column).extract_values().items()
                 },
-                index=getattr(self.m.vp, column).extract_values().keys(),
+                index=getattr(self.vp, column).extract_values().keys(),
             )
             for column in sub_profile_columns
         }
-        baseline_values = [pyo.value(self.m.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
-        values = [pyo.value(self.m.vp.Edot_t_net[t]) for t in range(self.var_length)]
-        print(f"{self.design_key} {self.date} Edot_t_net: {round(min(values))}-{round(max(values))}, Edot_t_baseline: {round(min(baseline_values))}-{round(max(baseline_values))}, cost {round(self.m.vp.tariff_cost.value)}")
+
+        baseline_values = [pyo.value(self.vp.Edot_t_baseline[t]) for t in range(self.var_length)]
+        values = [pyo.value(self.vp.Edot_t_net[t]) for t in range(self.var_length)]
+        print(f"{self.design_key} {self.date} Edot_t_net: {round(min(values))}-{round(max(values))}, Edot_t_baseline: {round(min(baseline_values))}-{round(max(baseline_values))}, cost {round(self.vp.tariff_cost.value)}")
+        
         return profile_dict
 
     def solve_optimization_day(self, tee=False):
@@ -526,8 +528,8 @@ class O2Problem:
 
     def print_cost_values(self, charge_dict=None, prev_demand_dict=None):
         try:
-            test_value = pyo.value(self.m.vp.Edot_t_net[0])
-            test_value_2 = pyo.value(self.m.vp.tariff_cost)
+            test_value = pyo.value(self.vp.Edot_t_net[0])
+            test_value_2 = pyo.value(self.vp.tariff_cost)
             if test_value is None or test_value_2 is None:
                 print("  Optimization did not solve - skipping cost calculation")
                 return
@@ -536,7 +538,7 @@ class O2Problem:
             return
 
         baseline_consumption_data_dict = {
-            "electric": np.array([pyo.value(getattr(self.m.vp, "Edot_t_baseline")[t]) for t in range(self.var_length)]),
+            "electric": np.array([pyo.value(getattr(self.vp, "Edot_t_baseline")[t]) for t in range(self.var_length)]),
         }
         
         baseline_itemized_costs, _ = costs.calculate_itemized_cost(
@@ -547,7 +549,7 @@ class O2Problem:
         )
 
         recalc_consumption_data_dict = {
-            "electric": np.array([pyo.value(getattr(self.m.vp, "Edot_t_net")[t]) for t in range(self.var_length)]),
+            "electric": np.array([pyo.value(getattr(self.vp, "Edot_t_net")[t]) for t in range(self.var_length)]),
         }
         
         recalculated_cost, _ = costs.calculate_itemized_cost(
@@ -557,7 +559,7 @@ class O2Problem:
             **self.cost_kwargs
         )
 
-        print(f"  tariff_cost cost: {round(pyo.value(self.m.vp.tariff_cost),0)}")
+        print(f"  tariff_cost cost: {round(pyo.value(self.vp.tariff_cost),0)}")
         print(f"  baseline cost: {round(baseline_itemized_costs['total'],0)}")
         print(f"  non-pyo-obj recalculated cost: {round(recalculated_cost['total'],0)}")
         print('pyo var itemized')
