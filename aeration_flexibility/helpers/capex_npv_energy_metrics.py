@@ -366,7 +366,7 @@ def calculate_capex(sub_dict, storage_type, new_o2_supply_tech, base_wwtp_key, n
     # Counterfactual capex (cost of additional O2 capacity without storage)
     counterfactual_capex = 0
     o2_supply_tech = base_wwtp_key.split("__")[0]
-    additional_o2_capacity = new_param_vals["Ndot_target_max"] - new_param_vals["Ndot_b_max"]
+    additional_o2_capacity = new_param_vals["Ndot_r_max"] - new_param_vals["Ndot_b_max"] # TODO: change to Ndot_target_max
     if o2_supply_tech == "psa":
         counterfactual_capex = psa_unit_cost(additional_o2_capacity)
     elif o2_supply_tech == "cryo":

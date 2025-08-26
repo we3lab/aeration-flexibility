@@ -63,7 +63,7 @@ def process_n_days(group_days, design_key, base_wwtp_key, upgrade_key, tariff_ke
     Process N consecutive days as a single optimization problem.
     
     Args:
-        days: List of N consecutive days to process
+        group_days: List of N consecutive days to process
         design_key: Design key for the optimization
         base_wwtp_key: Base WWTP configuration key
         upgrade_key: Upgrade configuration key
@@ -141,7 +141,7 @@ def process_n_days(group_days, design_key, base_wwtp_key, upgrade_key, tariff_ke
                 }
                 
                 # Store initial storage state for the second to last day of the group
-                if day_idx == len(group_days) - 2 or len(group_days)<horizon_days:  # Second to last day
+                if day_idx == len(group_days) - 2 or len(group_days)<horizon_days:  # Second to last day or end of month
                     initial_SoS_next_run = extract_final_storage_state(day_profile)
             else:
                 profiles_dict[day] = None
@@ -161,24 +161,15 @@ def extract_final_storage_state(profile):
         profile: Dictionary containing the optimization profile with storage variables
         
     Returns:
-        dict: Dictionary containing the final storage state with keys:
-            - 'N': Final moles of O2 in storage (for tank systems)
-            - 'E': Final energy in storage (for battery systems)
+        dict: Dictionary containing the final storage state with 'N' or 'E'
     """
-    if not profile:
-        return None
-    
+     # Extract initial storage moles (N) or energy (E) for tank or battery systems
     final_storage_state = {}
-    
-    # Extract initial storage moles (N) for tank systems
-    if 'N' in profile and len(profile['N']) > 0:
-        final_storage_state['N'] = profile['N'].iloc[-1]  # Last value in the series
-    
-    # Extract initial energy (E) for battery systems
-    if 'E' in profile and len(profile['E']) > 0:
-        final_storage_state['E'] = profile['E'].iloc[-1]  # First value in the series
-    
-    return final_storage_state if final_storage_state else None
+    for storage_key in ['N', 'E']:
+        if storage_key in profile and len(profile[storage_key]) > 0:
+            final_storage_state[storage_key] = profile[storage_key].iloc[-1]  # Last value in the series
+
+    return final_storage_state
 
 
 def check_design_feasibility(month_results, summer_multiplier):
@@ -393,6 +384,7 @@ def process_design_point_and_month(design_point_data, run_name, tariff_data, int
     print(f"Month {month_key} for design key {design_key} completed in {time.time() - month_start_time:.3f}s")
 
     return {
+        "design_key": design_key,
         "month_key": month_key,
         "month_results": month_results,
         "new_param_vals": new_param_vals,
@@ -432,7 +424,7 @@ def sample_from_multivariate_normal(all_designs, designs_per_run, o2_range, comp
     is_univariate = "battery" in upgrade_key or "liquid" in upgrade_key
     
     for design_key, design_data in all_designs.items():
-        npv = design_data["metrics"]["npv"]["total"]
+        npv = design_data["npv"]["total"]
         if is_valid_npv(npv):
             coords = [float(x) for x in design_key.split("__")]
             points.append(coords[:1] if is_univariate else coords[:2])
@@ -503,80 +495,66 @@ def sample_from_multivariate_normal(all_designs, designs_per_run, o2_range, comp
 def calculate_metrics_from_annual_profiles(annual_profiles, tariff_key, upgrade_key, new_param_vals, tariff_data, num_months=12, start_date=None, end_date=None):
     """Calculate annual metrics from concatenated profiles."""
     if not annual_profiles["Edot_t_net"]:
-        return {"energy_metrics": {}, "opex": {}}
+        return {"capacity_factor": 0, "rte": 0, "mean_energy_capacity": 0, "mean_power_capacity": 0, "opex": {}}
     
-    profiles = np.concatenate(annual_profiles["Edot_t_net"])
-    baseline_profiles = np.concatenate(annual_profiles["Edot_t_baseline"])
-    
-    # Initialize results
-    opex = {"new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0}}
+    Edot_t_net = np.array(annual_profiles["Edot_t_net"])
+    Edot_t_baseline = np.array(annual_profiles["Edot_t_baseline"])    
+    store_id = "E" if "battery" in upgrade_key else "N"
 
+    # Calculate annual costs
     charge_dict = costs.get_charge_dict(
         start_date, end_date, tariff_data[tariff_key], resolution="15m"
     )
-    
-    # Recalculate costs
-    new_itemized_costs, _ = costs.calculate_itemized_cost(
-        charge_dict,
-        {"electric": profiles},
-        resolution="15m",
-        desired_utility="electric",
-        decompose_exports=True
-    )
+    kwargs = {
+        "desired_utility": "electric",
+        "resolution": '15m',
+        "decompose_exports": True
+        }
+    new_itemized_costs, _ = costs.calculate_itemized_cost(charge_dict, {"electric": Edot_t_net}, **kwargs)
+    baseline_itemized_costs, _ = costs.calculate_itemized_cost(charge_dict, {"electric": Edot_t_baseline}, **kwargs)
 
-    baseline_itemized_costs, _ = costs.calculate_itemized_cost(
-        charge_dict,
-        {"electric": baseline_profiles},
-        resolution="15m",
-        desired_utility="electric",
-        decompose_exports=True
-    )
-
-    # Extract individual costs
+    # Extract individual opex components
+    opex = {"new": {"h2": 0}, "baseline": {"h2": 0}, "savings": {"h2": 0}}
     for key in ("energy", "demand", "export", "customer"):
         opex["new"][key] = new_itemized_costs["electric"][key]
         opex["baseline"][key] = baseline_itemized_costs["electric"][key]
         opex["savings"][key] = opex["baseline"][key] - opex["new"][key]
     
     # Scale annual OPEX values to 1-year for annual savings
-    if num_months != 12:
-        scale_factor = 12 / num_months if num_months > 0 else 0
-        for name in ["new", "baseline", "savings"]:
-            for k in ["energy", "demand", "export", "customer"]:
-                opex[name][k] *= scale_factor
-    
-    # Initialize metrics dictionary
-    store_id = "E" if "battery" in upgrade_key else "N"
-    energy_metrics = {
-        "capacity_factor": np.max(np.concatenate(annual_profiles[store_id])) / new_param_vals[f"{store_id}_max"],
-        "rte": metrics.roundtrip_efficiency(baseline_profiles, profiles),
-        "mean_energy_capacity": metrics.energy_capacity(
-            baseline_profiles,
-            profiles,
-            timestep=0.25,
-            ec_type="discharging",
-            relative=True,
-        ),
-        "mean_power_capacity": metrics.power_capacity(
-            baseline_profiles,
-            profiles,
-            timestep=0.25,
-            pc_type="average",
-            relative=True,
-        ),
-    }
+    scale_factor = 12 / num_months if num_months > 0 else 0
+    for name in ["new", "baseline", "savings"]:
+        for k in ["energy", "demand", "export", "customer"]:
+            opex[name][k] *= scale_factor
     
     # Add H2 to metrics if applicable
     if "elec" in upgrade_key:
         Ndot_c_profiles = np.concatenate(annual_profiles["Ndot_c"])
         h2_moles = np.sum(Ndot_c_profiles) * 2  # 2 moles H2 per mole O2
         h2_value = moles_to_mass(h2_moles, M_H2) * price_h2_kg
-        energy_metrics["H2"] = h2_moles
         opex["new"]["h2"] = -h2_value
         opex["savings"]["h2"] = h2_value
     
     return {
-        "energy_metrics": energy_metrics,
+        "capacity_factor": np.max(
+            np.array(annual_profiles[store_id])
+            ) / new_param_vals[f"{store_id}_max"],
+        "rte": metrics.roundtrip_efficiency(
+            Edot_t_baseline, Edot_t_net
+            ),
+        "mean_energy_capacity": metrics.energy_capacity(
+            Edot_t_baseline,
+            Edot_t_net,
+            timestep=0.25,
+            ec_type="discharging",
+            relative=True,
+        ),
+        "mean_power_capacity": metrics.power_capacity(
+            Edot_t_baseline,
+            Edot_t_net,
+            timestep=0.25,
+            pc_type="average",
+            relative=True,
+        ),
         "opex": opex
     }
 
@@ -830,17 +808,14 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
 
     print(f"\nProcessing {config_name}")
 
-    # Save intermediate file paths if available
+    # Look for and store intermediate file paths if available
     intermediate_dir = os.path.abspath(f"aeration_flexibility/output_data/{run_name}/intermediate/{config_name}")
+    intermediate_filepaths = {}
     if not os.path.exists(intermediate_dir):
         print("   No intermediate files found")
-        intermediate_filepaths = {}
     else:
-        intermediate_filepaths = {}
         all_files = os.listdir(intermediate_dir)
         print(f"  Found {len(all_files)} files in directory")
-        
-        # Look for and store intermediate file paths
         for filename in all_files:
             if filename.endswith('.pkl'):  # structure design_key_month_key_date.pkl E.g.: 4.17__473.3_2022-07_2022-07-01.pkl
                 base_name = filename.replace('.pkl', '')
@@ -945,9 +920,9 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
         # GET CURRENT BEST NPV AND CHECK FOR CONVERGENCE
         current_best_npv = max(
             [
-                result["metrics"]["npv"]["total"]
+                result["npv"]["total"]
                 for result in all_results.values()
-                if is_valid_npv(result["metrics"]["npv"]["total"])
+                if is_valid_npv(result["npv"]["total"])
             ],
             default=-np.inf,
         )
@@ -970,7 +945,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
 
         # CREATE JOB QUEUE WITH DESIGN - MONTH COMBINATIONS
         sorted_unsolved_points = sorted(unsolved_points, key=lambda x: x[0], reverse=True)  # solve largest to smallest
-        print(f"  Creating job queue from {len(sorted_unsolved_points)} unsolved points")
+        print(f"  Creating job queue from {len(unsolved_points)} unsolved points")
         print(f"  Current infeasible_designs: {sorted(list(infeasible_designs))}")
         # Check intermediate files and mark designs as infeasible if already assessed
         job_queue = []
@@ -1019,7 +994,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             
         # PROCESS JOBS, TRACKING RESULTS AND DYNAMICALLY REMOVING FURTHER INFEASIBLE DESIGNS
         print(f"Processing {len(job_queue)} jobs with {n_jobs} workers, skipped {skipped_count} infeasible designs")
-        results = []
+        all_designs_month_results = []
         with Pool(processes=n_jobs) as pool:
             # Submit initial batch of up to n_jobs jobs
             pending_jobs = {}
@@ -1033,12 +1008,12 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                 for async_result in list(pending_jobs.keys()):
                     if async_result.ready():
                         job_idx, design_key = pending_jobs.pop(async_result)
-                        result = async_result.get()
-                        results.append(result)
+                        job_result = async_result.get()
+                        all_designs_month_results.append(job_result)
 
-                        if not result["is_feasible"]:
+                        if not job_result["is_feasible"]:
                             infeasible_designs.add(design_key)
-                            print(f"Design {design_key} marked as {result['failure_reason']}, pruning smaller hours")
+                            print(f"Design {design_key} marked as {job_result['failure_reason']}, pruning smaller hours")
                         
                             # Remove unsubmitted jobs with this design key or smaller from the queue TODO: check
                             failed_hours = float(design_key.split('__')[0])
@@ -1063,7 +1038,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
         # AFTER RUNNING all months / design keys, process NPV results for this iteration
         for Hours_of_O2, compression_ratio in unsolved_points:
             design_key = f"{Hours_of_O2}__{compression_ratio}"
-            design_month_results = [r for r in results if r["design_key"] == design_key]
+            design_month_results = [r for r in all_designs_month_results if r["design_key"] == design_key]
 
             if not design_month_results:  # create dummy results if all infeasible
                 print(f"  No results processed for {design_key}, creating dummy infeasible result")
@@ -1075,6 +1050,7 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             annual_profiles = {"Edot_t_net": [], "Edot_t_baseline": [], "E": [], "N": [], "Ndot_c": []}
             max_values = {"Ndot_c": 0, "Edot_c": 0}
             all_dates = []
+            
             for result in design_month_results:
                 if not result["is_feasible"]:
                     continue
@@ -1094,34 +1070,31 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
                                 print(f"Using {replacement_day} as replacement for {missing_date}")
                                 replacement_profile, replacement_max_values = month_results[replacement_day]
                                 for key in keys_to_append:
-                                    if key in replacement_profile:
-                                        annual_profiles[key].extend(replacement_profile[key])
-
+                                    annual_profiles[key].extend(replacement_profile[key])
                                 for key in max_values:
                                     max_values[key] = max(max_values[key], replacement_max_values.get(key, 0))
                                 break
                 
                 # Process actual solved days
-                for profile, day_max_values in month_results.values():
+                for day, (profile, day_max_values) in month_results.items():
                     if profile and "Edot_t_net" in profile:
                         for key in annual_profiles:
-                            annual_profiles[key].extend(profile[key])
+                            if key in profile:  # TODO: need "else"?
+                                annual_profiles[key].extend(profile[key])
                         for key in max_values:
                             max_values[key] = max(max_values[key], day_max_values.get(key, 0))
-
-                        for day in month_results.keys():
-                            if month_results[day][0] == profile:  # This profile corresponds to this day
-                                all_dates.append(day)
-                                break
+                        all_dates.append(day)
+                continue
 
             num_months = sum(1 for result in design_month_results if result["is_feasible"])
-            annual_metrics = calculate_metrics_from_annual_profiles(annual_profiles, tariff_key, upgrade_key, new_param_vals, tariff_data, num_months,  all_dates[0], all_dates[-1])
-            annual_metrics["max_values"] = max_values
+            start_dt = pd.to_datetime(all_dates[0])
+            end_dt = pd.to_datetime(all_dates[-1]) + pd.Timedelta(days=1)  # add 1 day to make final day included
+            annual_metrics = calculate_metrics_from_annual_profiles(annual_profiles, tariff_key, upgrade_key, new_param_vals, tariff_data, num_months, start_dt, end_dt)
 
             # Calculate maximum values across all months for capex calculation
             sub_dict = {"param_vals": new_param_vals, "billing_key": tariff_key, "max_values": {}}
             for max_key in ["Ndot_c", "Edot_c"]:
-                sub_dict["max_values"][max_key] = annual_metrics_data.get("max_values", {}).get(max_key, 0)
+                sub_dict["max_values"][max_key] = max_values.get(max_key, 0)
             
             capex, tank_metrics, capex_components, counterfactual_capex = (
                 calculate_capex(
@@ -1134,25 +1107,23 @@ def run_configuration(config, run_name, designs_per_run, o2_range, comp_ratio_ra
             )
 
             # Calculate NPV
-            npv = calculate_itemized_npv(annual_metrics_data, capex)
+            npv = calculate_itemized_npv(annual_metrics, capex)
             npv["from capex savings"] = counterfactual_capex
-            print(
-                f" {design_key} NPV energy ${npv['by_component']['energy']:,.2f} demand ${npv['by_component']['demand']:,.2f} export ${npv['by_component']['export']:,.2f} H2 ${npv['by_component']['h2']:,.2f} Total ${npv['total']:,.2f} capex {capex}"
-            )
-
+            
             # Store results
-            all_results[design_key] = {
-                "design_key": design_key,
-                "metrics": annual_metrics_data,
-                "month_profiles": None, # No longer storing monthly profiles
-                "new_param_vals": new_param_vals,
-            }
+            npvbc = npv["by_component"]
+            print(f" {design_key} NPV ${npv['total']:,.2f} (energy {npvbc['energy']:,.2f} demand {npvbc['demand']:,.2f} export {npvbc['export']:,.2f} H2 {npvbc['h2']:,.2f} capex {capex})")
+            annual_metrics["max_values"] = max_values
+            annual_metrics["npv"] = npv
+            annual_metrics["new_param_vals"] = new_param_vals
+            all_results[design_key] = annual_metrics
 
             # Clean up memory
-            del annual_metrics_data
+            del annual_metrics
             del capex_components
-
-        del results
+            del design_month_results
+        
+        del all_designs_month_results
         gc.collect()
 
         iteration += 1

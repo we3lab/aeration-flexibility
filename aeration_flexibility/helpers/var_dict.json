@@ -52,7 +52,8 @@
         "Ndot_b_min": {"domain": "NonNegativeReals"}, 
         "Ndot_c_max": {"domain": "NonNegativeReals"}, 
         "Ndot_r_max": {"domain": "NonNegativeReals"},
-        "unmet_o2_max": {"domain": "NonNegativeReals"}
+        "unmet_o2_max": {"domain": "NonNegativeReals"},
+        "Ndot_target_max": {"domain": "NonNegativeReals"}
       },
       "energy": {
         "Edot_b_comp_coeff": {"domain": "NonNegativeReals"}, 

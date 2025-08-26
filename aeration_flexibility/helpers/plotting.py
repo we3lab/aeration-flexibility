@@ -99,7 +99,7 @@ def get_design_data(config_data):
         return all_results, dummy_key
     
     best_design_key = max(
-        valid_keys, key=lambda k: all_results[k]["metrics"]["npv"]["total"]
+        valid_keys, key=lambda k: all_results[k]["npv"]["total"]
     )
     return all_results, best_design_key
 
@@ -261,18 +261,18 @@ def _extract_energy_data(results, tariff_key):
             print(f"No valid keys for {config_key}, skipping.")
             continue
 
-        best_design_key = max(valid_keys, key=lambda k: all_results[k]["metrics"]["npv"]["total"])
+        best_design_key = max(valid_keys, key=lambda k: all_results[k]["npv"]["total"])
         design_data = all_results[best_design_key]
 
-        if "energy_metrics" not in design_data["metrics"]:
+        if "mean_energy_capacity" not in design_data:
+            print("mean_energy_capacity not found in data")
             continue
 
-        energy_metrics = design_data["metrics"]["energy_metrics"]
-        capacity_factor = energy_metrics["capacity_factor"]
-        norm_energy = energy_metrics["mean_energy_capacity"]
-        norm_power = energy_metrics["mean_power_capacity"]
+        capacity_factor = design_data["capacity_factor"]
+        mean_energy_capacity = design_data["mean_energy_capacity"]
+        mean_power_capacity = design_data["mean_power_capacity"]
 
-        if np.isnan([capacity_factor, norm_energy, norm_power]).any():
+        if np.isnan([capacity_factor, mean_energy_capacity, mean_power_capacity]).any():
             print(f"Skipping {config_key} due to NaN in energy metrics.")
             continue
 
@@ -281,8 +281,8 @@ def _extract_energy_data(results, tariff_key):
         
         energy_data.append({
             "capacity_factor": capacity_factor,
-            "norm_energy": norm_energy,
-            "norm_power": norm_power,
+            "mean_energy_capacity": mean_energy_capacity,
+            "mean_power_capacity": mean_power_capacity,
             "facility_type": facility_type,
             "base_upgrade_key": base_upgrade_key
         })
@@ -301,11 +301,11 @@ def _plot_energy_metrics(ax_energy, ax_energy2, energy_data, color_config):
         color = upgrade_colors.get(data["base_upgrade_key"], "#000000")
 
         # Plot energy capacity (solid marker)
-        ax_energy.scatter(data["capacity_factor"], data["norm_energy"], marker=marker,
+        ax_energy.scatter(data["capacity_factor"], data["mean_energy_capacity"], marker=marker,
                          color=color, s=200, alpha=0.9, label=f"{data['facility_type']} Energy")
         
         # Plot power capacity (hollow marker)
-        ax_energy2.scatter(data["capacity_factor"], data["norm_power"], marker=marker,
+        ax_energy2.scatter(data["capacity_factor"], data["mean_power_capacity"], marker=marker,
                           color=color, s=200, facecolors="none", alpha=0.9, linewidth=2,
                           label=f"{data['facility_type']} Power")
         
@@ -358,8 +358,7 @@ def consolidate_npv_data(results, grid_results):
             print(f"Skipping {config_key}: design_data is None")
             continue
             
-        metrics = design_data["metrics"]
-        npv_metrics = metrics["npv"]
+        npv_metrics = design_data["npv"]
         
         if "by_component" not in npv_metrics: #TODO: remove
             print(f"Skipping {config_key}: NPV structure incomplete (missing 'by_component')")
@@ -378,7 +377,7 @@ def consolidate_npv_data(results, grid_results):
             "demand_npv": npv_components.get("demand"), 
             "export_npv": npv_components.get("export"),
             "h2_npv": npv_components.get("h2"),
-            "capex_npv": -metrics.get("capex"),
+            "capex_npv": -design_data.get("capex"),
             "npv": npv_metrics.get("total")
         }
         
@@ -571,11 +570,11 @@ def si_cem_figure(results, run_name, output_dir):
             return (
                 key in all_results and
                 "metrics" in all_results[key] and
-                "npv" in all_results[key]["metrics"] and
-                is_valid_npv(all_results[key]["metrics"]["npv"]["total"])
+                "npv" in all_results[key] and
+                is_valid_npv(all_results[key]["npv"]["total"])
             )
         def get_lcot(key):
-            npv = all_results[key]["metrics"]["npv"]["total"]
+            npv = all_results[key]["npv"]["total"]
             return npv_to_delta_lcot(npv)
         # Helper for plotting a single iteration
         def plot_iter(ax, hours, ratios, lcots, cmap, absmax, smoothing):
@@ -715,12 +714,12 @@ def _figure_2_a_c(ax, day_data, data_config, with_recovery, upgrade_key, ylim=No
     sns.lineplot(x=time, y=day_data["Edot_t_baseline"]/1000, color="grey", 
                 linewidth=2, linestyle="--", ax=ax, label="Baseline")
     if with_recovery:
-        sns.lineplot(x=time, y=day_data["Edot_t"]/1000, color="k", 
+        sns.lineplot(x=time, y=day_data["Edot_t_net"]/1000, color="k", 
                     linewidth=2, linestyle="-", ax=ax, label="Optimized")
     
     # Calculate the difference between optimized and baseline
     baseline_power = day_data["Edot_t_baseline"]/1000
-    optimized_power = day_data["Edot_t"]/1000 if with_recovery else baseline_power
+    optimized_power = day_data["Edot_t_net"]/1000 if with_recovery else baseline_power
     
     # Find where optimized power is different from baseline
     power_diff = optimized_power - baseline_power
@@ -887,7 +886,7 @@ def figure_2_function(run_name, suffix="1.0__0", day="2022-07-01", npv_data=None
             day_data[key] = np.array([x if abs(x) >= 50 else 0 for x in day_data[key]])
         
         all_power_data.extend(day_data["Edot_t_baseline"] / 1000)  # Convert to MW
-        all_power_data.extend(day_data["Edot_t"] / 1000)  # Convert to MW
+        all_power_data.extend(day_data["Edot_t_net"] / 1000)  # Convert to MW
         
         # TOP ROW: Technology profiles with modified power plotting   
         power_config = _figure_2_power_config(upgrade_key, base_wwtp_key, True, True)
@@ -1336,8 +1335,8 @@ def figure_4_function(multipliers, hours_range, results, infeas, config):
             
         all_results, best_design_key = get_design_data(mult_results[upgrade_type])
         design_data = all_results[best_design_key]
-        storage_npv.append(design_data["metrics"]["npv"]["total"] / 1e6)  # Convert to $M
-        counterfactual_npv.append(-design_data["metrics"]["npv"]["from capex savings"] / 1e6)  # Convert to $M
+        storage_npv.append(design_data["npv"]["total"] / 1e6)  # Convert to $M
+        counterfactual_npv.append(-design_data["npv"]["from capex savings"] / 1e6)  # Convert to $M
     
     x = np.arange(len(upgrade_labels))
     width = 0.35
@@ -1450,7 +1449,7 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
                 hours_idx = np.argmin(np.abs(hours_range - hours))
                 
                 # Calculate delta LCOT
-                npv = design_data["metrics"]["npv"]["total"]
+                npv = design_data["npv"]["total"]
                 if is_valid_npv(npv):
                     delta_lcot = npv_to_delta_lcot(npv)
                     summer_results[mult_idx, hours_idx] = delta_lcot
@@ -1484,7 +1483,7 @@ def generate_plots(run_name="run_test", run_configs=None, location_lookup=None,
             base_wwtp_key, upgrade_key, tariff_key, suffix = parse_config_key(config_key)
             all_results = config_data["all_results"]
             if design_key in all_results:
-                npv = all_results[design_key]["metrics"]["npv"]["total"]
+                npv = all_results[design_key]["npv"]["total"]
                 # if is_valid_npv(npv):
                 # Check if this is a tariff variation or summer config variation
                 if tariff_key in tariff_keys_to_run:

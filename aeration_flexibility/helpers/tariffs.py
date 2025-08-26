@@ -10,6 +10,13 @@ RANDOM_SEED = 4
 random.seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
+base_dir = os.path.dirname(os.path.dirname(__file__))
+
+# Global variables for lazy loading
+_tariff_data = None
+_tariff_configs = None
+_tariff_config_keys = None
+
 # Define calendar months and their date ranges
 CALENDAR_MONTHS = {
     "2022-01": {"start": "2022-01-01", "end": "2022-02-01"},
@@ -100,10 +107,6 @@ def get_all_days_in_month(year, month):
         days_in_month = 30
     
     return [f"{year}-{month:02d}-{day:02d}" for day in range(1, days_in_month + 1)]
-
-
-# Get the path to the data directory
-base_dir = os.path.dirname(os.path.dirname(__file__))
 
 
 def generate_parametrized_tariffs():
@@ -323,12 +326,6 @@ def build_tariff_configs(reference_file, tariff_data):
     return configs
 
 
-# Global variables for lazy loading
-_tariff_data = None
-_tariff_configs = None
-_tariff_config_keys = None
-
-
 def get_tariff_data():
     """Get tariff data (lazy loading)."""
     global _tariff_data
@@ -349,33 +346,6 @@ def get_tariff_configs():
     return _tariff_configs
 
 
-def get_tariff_config_keys():
-    """Get tariff config keys (lazy loading)."""
-    global _tariff_config_keys
-    if _tariff_config_keys is None:
-        configs = get_tariff_configs()
-        _tariff_config_keys = list(configs.keys())
-    return _tariff_config_keys
-
-
-def get_charge_dict_for_day(tariff_data, date):
-    """
-    Get charge dict for a specific day.
-    Args:
-        tariff_data: DataFrame containing the tariff rate data
-        date: Date string in format 'YYYY-MM-DD'
-    Returns:
-        Dictionary of charge arrays for the day
-    """
-    # Convert date to datetime64
-    start_date = np.datetime64(date)
-    end_date = start_date + np.timedelta64(1, 'D')  # Add 1 day
-    
-    return costs.get_charge_dict(
-        start_date, end_date, tariff_data, resolution="15m"
-    )
-
-
 def get_charge_dict_for_month(tariff_data, year, month):
     """
     Get charge dict for a specific month.
@@ -390,3 +360,4 @@ def get_charge_dict_for_month(tariff_data, year, month):
     return costs.get_charge_dict(
         month_dates["start"], month_dates["end"], tariff_data, resolution="15m"
     )
+    

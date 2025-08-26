@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Script to plot daily profiles for up to a week and save them as PNG files.
-Replicates the functionality of plot_test_profile.ipynb but saves to files.
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,19 +5,6 @@ import pickle as pkl
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-
-# Helper functions for standardized plotting
-def setup_plot_style():
-    """Set up consistent plot styling."""
-    plt.style.use('default')
-    plt.rcParams['figure.figsize'] = (15, 8)
-    plt.rcParams['font.size'] = 10
-    plt.rcParams['axes.grid'] = True
-    plt.rcParams['grid.alpha'] = 0.3
-    plt.rcParams['lines.linewidth'] = 1.5
-    plt.rcParams['legend.loc'] = 'best'
-    plt.rcParams['legend.frameon'] = False
-    plt.rcParams['legend.fontsize'] = 8
 
 def create_subplot_grid(n_rows=2, n_cols=1, figsize=(15, 8)):
     """Create a standardized subplot grid."""
@@ -45,139 +26,6 @@ def standardize_axis(ax, xlabel="Time Step (15 min intervals)", title="", legend
         ax.legend(bbox_to_anchor=(1.05, 1), loc=legend_loc)
     ax.legend()
 
-def plot_power_profiles(df, date, design_key, ax=None, param_values=None):
-    """Plot standardized power profiles."""
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(15, 6))
-    
-    ax.plot(df['Edot_b'], label='Edot_b (Blower Power)', color='green', linewidth=1.5)
-    ax.plot(df['Edot_t_net'], label='Edot_t_net (Net Power)', color='black', linewidth=1.5)
-    ax.plot(df['Edot_c'], label='Edot_c (Charging Power)', color='magenta', linewidth=1.5)
-    ax.plot(df['Edot_rem'], label='Edot_rem (Remaining Power)', color='gray', linewidth=1.5)
-    ax.plot(df['Edot_t_baseline'], label='Edot_t_baseline (Baseline Power)', color='blue', linewidth=2, linestyle='--')
-    
-    # Add parameter bounds if available
-    if param_values is not None:
-        if 'Edot_t_max' in param_values:
-            ax.axhline(y=param_values['Edot_t_max'], color='red', linestyle='-', alpha=0.7, 
-                      label=f'Edot_t_max: {param_values["Edot_t_max"]:.0f}')
-        if 'Edot_b_max' in param_values:
-            ax.axhline(y=param_values['Edot_b_max'], color='red', linestyle=':', alpha=0.7, 
-                      label=f'Edot_b_max: {param_values["Edot_b_max"]:.0f}')
-        if 'Edot_c_max' in param_values:
-            ax.axhline(y=param_values['Edot_c_max'], color='red', linestyle='--', alpha=0.7, 
-                      label=f'Edot_c_max: {param_values["Edot_c_max"]:.0f}')
-    
-    ax.set_ylabel('Power (kW)')
-    standardize_axis(ax, title=f'Power Profiles for {date} - {design_key}')
-    return ax
-
-def plot_flow_profiles(df, date, design_key, ax=None, param_values=None):
-    """Plot standardized flow rate profiles with parameter bounds."""
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(15, 6))
-    
-    ax.plot(df['Ndot_target'], label='Ndot_target (Target Flow)', color='black', linewidth=2, linestyle='--')
-    ax.plot(df['Ndot_b'], label='Ndot_b (Blower Flow)', color='red', linewidth=1.5)
-    
-    # Try to plot gas tank specific flows
-    try:
-        if 'Ndot_c' in df.columns:
-            ax.plot(df['Ndot_c'], label='Ndot_c (Charging Flow)', color='magenta', linewidth=1.5)
-        if 'Ndot_r' in df.columns:
-            ax.plot(df['Ndot_r'], label='Ndot_r (Recovery Flow)', color='purple', linewidth=1.5)
-    except:
-        print("Note: No gas tank flows to plot")
-    
-    ax.plot(df['unmet_o2'], label='Unmet O2 (penalty term)', color='cyan', linewidth=2.0)
-    
-    # Add parameter bounds if available
-    if param_values is not None:
-        if 'Ndot_b_min' in param_values:
-            ax.axhline(y=param_values['Ndot_b_min'], color='red', linestyle=':', alpha=0.7, 
-                      label=f'Ndot_b_min: {param_values["Ndot_b_min"]:.0f} mol/hr')
-        if 'Ndot_b_max' in param_values:
-            ax.axhline(y=param_values['Ndot_b_max'], color='red', linestyle=':', alpha=0.7, 
-                      label=f'Ndot_b_max: {param_values["Ndot_b_max"]:.0f} mol/hr')
-    
-    ax.set_ylabel('Flow Rate (mol/hr)')
-    standardize_axis(ax, title=f'Flow Rate Profiles for {date} - {design_key}')
-    return ax
-
-def plot_storage_profiles(df, date, design_key, ax1=None, ax2=None, param_values=None):
-    """Plot standardized storage profiles with parameter bounds."""
-    if ax1 is None or ax2 is None:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5))
-    
-    # Storage profiles
-    if 'N' in df.columns:
-        ax1.plot(df['N'], label='N (O2 Storage)', color='red', linewidth=2)
-        ax1.set_ylabel('O2 Storage (mol)')
-        ax1.set_title(f'O2 Storage Profile for {date} - {design_key}')
-        
-        # Add N_min and N_max bounds if available
-        if param_values is not None:
-            if 'N_min' in param_values:
-                ax1.axhline(y=param_values['N_min'], color='red', linestyle='--', alpha=0.7, 
-                           label=f'N_min: {param_values["N_min"]:.0f} mol')
-            if 'N_max' in param_values:
-                ax1.axhline(y=param_values['N_max'], color='red', linestyle='--', alpha=0.7, 
-                           label=f'N_max: {param_values["N_max"]:.0f} mol')
-        
-    elif 'E' in df.columns:
-        ax1.plot(df['E'], label='E (Energy Storage)', color='blue', linewidth=2)
-        ax1.set_ylabel('Energy Storage (kWh)')
-        ax1.set_title(f'Energy Storage Profile for {date} - {design_key}')
-        
-        # Add E_max bound if available
-        if param_values is not None and 'E_max' in param_values:
-            ax1.axhline(y=param_values['E_max'], color='blue', linestyle='--', alpha=0.7, 
-                       label=f'E_max: {param_values["E_max"]:.0f} kWh')
-    
-    standardize_axis(ax1)
-    
-    # Pressure profile (for gas tanks)
-    if 'P' in df.columns:
-        ax2.plot(df['P'], label='P (Tank Pressure)', color='purple', linewidth=2)
-        ax2.set_ylabel('Pressure (MPa)')
-        ax2.set_title(f'Tank Pressure Profile for {date} - {design_key}')
-        
-        if param_values is not None:
-            if 'P_min' in param_values:
-                ax2.axhline(y=param_values['P_min'], color='purple', linestyle='--', alpha=0.7, 
-                            label=f'P_min: {param_values["P_min"]:.3f} MPa')
-            if 'P_max' in param_values:
-                ax2.axhline(y=param_values['P_max'], color='purple', linestyle='--', alpha=0.7, 
-                            label=f'P_max: {param_values["P_max"]:.3f} MPa')
-        
-        standardize_axis(ax2)
-    else:
-        ax2.text(0.5, 0.5, 'No pressure data available', ha='center', va='center', transform=ax2.transAxes)
-        ax2.set_title('No Pressure Data')
-        standardize_axis(ax2)
-
-def plot_power_comparison(df, date, design_key, ax1=None, ax2=None):
-    """Plot standardized power comparison."""
-    if ax1 is None or ax2 is None:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
-    
-    # Direct comparison
-    ax1.plot(df['Edot_t_baseline'], label='Edot_t_baseline', color='blue', linewidth=2)
-    ax1.plot(df['Edot_t'], label='Edot_t (Optimized)', color='red', linewidth=2)
-    ax1.plot(df['Edot_t_net'], label='Edot_t_net (Net)', color='black', linewidth=1.5, linestyle='--')
-    
-    ax1.set_ylabel('Power (kW)')
-    standardize_axis(ax1, title=f'Power Comparison: Baseline vs Optimized for {date} - {design_key}')
-    
-    # Difference plot
-    power_diff = df['Edot_t'] - df['Edot_t_baseline']
-    ax2.plot(power_diff, label='Power Difference (Optimized - Baseline)', color='green', linewidth=2)
-    ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-    
-    ax2.set_ylabel('Power Difference (kW)')
-    standardize_axis(ax2, title=f'Power Difference for {date} - {design_key}')
-    
-    return ax1, ax2
 
 def load_daily_data(run_name, config_name, design_key, date, month_key):
     """Load data for a specific day."""
@@ -226,7 +74,8 @@ def plot_weekly_profiles(run_name, config_name, design_key, start_date, output_d
     """Plot concatenated profiles for up to a week of data as a single continuous time series."""
     
     # Setup
-    setup_plot_style()
+    plt.style.use('default')
+    plt.rcParams['figure.figsize'] = (15, 8)
     os.makedirs(output_dir, exist_ok=True)
     
     # Generate date range
@@ -280,6 +129,8 @@ def create_combined_weekly_plot(full_df, time_steps, available_dates, design_key
     ax3 = plt.subplot(3, 1, 3)  # Storage profiles
     
     # Plot 1: Power Profiles
+    print(full_df['Edot_t_net'][0:100].mean())
+    print(full_df['Edot_t_baseline'][0:100].mean())
     ax1.plot(time_steps, full_df['Edot_b'], label='Edot_b (Blower Power)', color='green', linewidth=1.5)
     ax1.plot(time_steps, full_df['Edot_t_net'], label='Edot_t_net (Net Power)', color='black', linewidth=1.5)
     ax1.plot(time_steps, full_df['Edot_c'], label='Edot_c (Charging Power)', color='magenta', linewidth=1.5)
@@ -294,7 +145,15 @@ def create_combined_weekly_plot(full_df, time_steps, available_dates, design_key
         if 'Edot_b_max' in param_values:
             ax1.axhline(y=param_values['Edot_b_max'], color='red', linestyle=':', alpha=0.7, 
                       label=f'Edot_b_max: {param_values["Edot_b_max"]:.0f}')
-    
+
+        
+    max_series_value = max([
+        full_df['Edot_t_net'].max(),
+        full_df['Edot_t_baseline'].max()
+    ])
+    y_limit = min(max_series_value + 10, 4000)
+    ax1.set_ylim(0, y_limit)
+
     ax1.set_ylabel('Power (kW)', fontsize=12)
     ax1.set_title(f'Power Profiles - {design_key} ({available_dates[0]} to {available_dates[-1]})', fontsize=14)
     ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -406,7 +265,7 @@ def create_weekly_summary_plot(run_name, config_name, design_key, dates, month_k
         # Plot power comparison
         ax1.plot(df['Edot_t_baseline'], label=f'{date} (Baseline)', 
                 color=color, linewidth=1.5, alpha=0.7)
-        ax1.plot(df['Edot_t'], label=f'{date} (Optimized)', 
+        ax1.plot(df['Edot_t_net'], label=f'{date} (Optimized)', 
                 color=color, linewidth=2, linestyle='--')
         
         # Plot storage
@@ -442,20 +301,11 @@ def main():
     """Main function with command line argument parsing."""
     
     # Configuration parameters - modify these to plot different configs and days
-    run_name = "wwtp_comparison_svcw_40mgd"  # The run name from your config
-    config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__svcw___1.0__0"  # Config name
-    design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
-    date = "2022-07-05"  # Specific date (YYYY-MM-DD)
 
     run_name = "nr_comparison_svcw"  # The run name from your config
     config_name = "o2__psa__1.6__0___none__gas_tank__0___0.0__svcw___1.6__0"  # Config name
     design_key = "0.5__700.0"  # Design key (Hours_of_O2__compression_ratio)
     date = "2022-07-01"  # Specific date (YYYY-MM-DD)
-
-    # run_name = "wwtp_comparison_ebmud_40mgd"  # The run name from your config
-    # config_name = "air__compressor__1.0__0___compressor__gas_tank__0___0.0__ebmud___1.0__0"  # Config name
-    # design_key = "1.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
-    # date = "2024-01-03"  # Specific date (YYYY-MM-DD)
 
     # run_name = "tornado_svcw_psa"  # The run name from your config
     # config_name = "o2__psa__1.1__0___none__gas_tank__0___0.0__svcw_d1.0_e1.0_w0___1.1__0"  # Config name
@@ -476,7 +326,12 @@ def main():
     # config_name = "o2__cryo__1.0__0___none__liquid_tank__0___0.0__ebmud___1.0__0"  # Config name
     # design_key = "3.0__100.0"  # Design key (Hours_of_O2__compression_ratio)
     # date = "2024-01-03"  # Specific date (YYYY-MM-DD)
-        
+
+    run_name = "upgrades_ebmud_data_svcw_tariff_40mgd"  # The run name from your config
+    config_name = "o2__cryo__1.0__0___none__liquid_tank__0___0.0__svcw___1.0__0"  # Config name
+    design_key = "1.29__100.0"  # Design key (Hours_of_O2__compression_ratio)
+    date = "2024-06-01"  # Specific date (YYYY-MM-DD)
+
     # Run the plotting
     plot_weekly_profiles(
         run_name=run_name,

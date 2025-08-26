@@ -19,13 +19,7 @@ sys.stdout = sys.__stdout__
 
 HELPERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 var_dict = json.load(open(os.path.join(HELPERS_DIR, "var_dict.json")))
-
-profile_columns = [
-    name
-    for name, props in var_dict.items()
-    if props.get("indexed") == True
-    and props.get("length") == "var_length"
-]
+profile_columns = [name for name, props in var_dict.items() if props.get("indexed") == True]
 
 
 class O2Problem:
@@ -125,8 +119,9 @@ class O2Problem:
                 else min(Ndot_target_min, (1 - compressor_turndown) * Ndot_b_max)
             ),
             "Ndot_r_max": 0 if self.is_battery else annual_param_limits["Ndot_target_max"],
+            "Ndot_target_max": annual_param_limits["Ndot_target_max"],
             "Ndot_c_max": 0 if (self.is_battery or self.has_surplus) else N_max/1,  # (limit / 1 hour)
-            "unmet_o2_max": Ndot_b_max / 10,
+            "unmet_o2_max": Ndot_b_max,  # should account for all NR scenarios
             # Energy parameters
             "Edot_t_max": annual_param_limits["Edot_t_max"],
             "Edot_r_max": E_max / Hours_of_O2 if self.is_battery else 0,
@@ -399,34 +394,6 @@ class O2Problem:
         if self.is_gas_tank:  # Add h2 value
             rules["h2_value"] = self.vp.h2_value == moles_to_mass(self.vp.total_h2, M_H2) * price_h2_kg
 
-    def add_cost_constraints(self, charge_dict, prev_demand_dict=None):
-        """Add cost constraints to the model."""
-        consumption_data_dict = {
-            "electric": self.vp.Edot_t_net,
-        }
-        
-        self.itemized_costs, self.m = costs.calculate_itemized_cost(
-            charge_dict=charge_dict,
-            consumption_data_dict=consumption_data_dict,
-            model=self.m,
-            prev_demand_dict=prev_demand_dict,
-        )
-        
-        self.m.cost_const.add_component(
-                'total cost',
-                pyo.Constraint(expr=getattr(self.vp, 'tariff_cost') == self.itemized_costs["total"]),
-            )
-
-        # Calculate h2 value
-        if self.is_gas_tank:
-            self.m.cost_const.add_component(
-                "h2_value",
-                pyo.Constraint(
-                    expr=self.vp.h2_value
-                    == moles_to_mass(self.vp.total_h2, M_H2) * price_h2_kg
-                ),
-            )
-
     def _add_simul_penalty(self, obj_expr, charge_keys, discharge_keys):
         penalty_coeff=1e-5
         for t in range(self.var_length):
@@ -482,22 +449,12 @@ class O2Problem:
         
         unmet_values = self.vp.unmet_o2.extract_values()
         if max(unmet_values.values()) > 10.0:
-            print(f"{self.design_key} {self.date} Returning zeros because there is significant unmet o2")
+            print(f"{self.design_key} {self.date} Returning inf Edot_t_net because there is significant unmet o2")
             print(f'unmet o2 max: {max(self.vp.unmet_o2.extract_values().values())}')
-            print(f'Ndot_target max: {max(self.vp.Ndot_target.extract_values().values())}')
-            print(f'Ndot_b max: {max(self.vp.Ndot_b.extract_values().values())}')
-            print(f'Ndot_b_aer max: {max(self.vp.Ndot_b_aer.extract_values().values())}')
-            print(f'Ndot_b_excess max: {max(self.vp.Ndot_b_excess.extract_values().values())}')
-            print(f'Ndot_c max: {max(self.vp.Ndot_c.extract_values().values())}')
-            print(f'Ndot_r max: {max(self.vp.Ndot_r.extract_values().values())}')
-            print(f'Ndot_b_max: {self.vp.Ndot_b_max.extract_values().values()}')
-            print(f'Edot_b max: {max(self.vp.Edot_b.extract_values().values())}')
-            print(f'Edot_b_gen max: {max(pyo.value(self.vp.Edot_b_gen[t]) for t in range(self.var_length))}')
-            print(f'Edot_b_comp max: {max(pyo.value(self.vp.Edot_b_comp[t]) for t in range(self.var_length))}')
-            print(f'Edot_b_excess max: {max(pyo.value(self.vp.Edot_b_excess[t]) for t in range(self.var_length))}')
-            print(f'Edot_c max: {max(self.vp.Edot_c.extract_values().values())}')
-            print(f'Edot_c_max: {self.vp.Edot_c_max.extract_values().values()}')
-            print(f'Edot_t_max: {self.vp.Edot_t_max.extract_values().values()}')
+            print(f'max Ndot_target: {max(self.vp.Ndot_target.extract_values().values())}')
+            print(f'max Ndot_b: {max(self.vp.Ndot_b.extract_values().values())}')
+            print(f'max Ndot_r: {max(self.vp.Ndot_r.extract_values().values())}')
+            print(f'Ndot_b_max: {max(self.vp.Ndot_b_max.extract_values().values())}')
             
             profile_dict["Edot_t_net"] = pd.Series([1e8] * self.var_length, index=range(self.var_length))
 
@@ -513,7 +470,6 @@ class O2Problem:
             solve_time = time.time() - start_time
 
             if results.solver.termination_condition == pyo.TerminationCondition.optimal:
-                print(pyo.TerminationCondition)
                 return self.get_profile()
             elif (
                 results.solver.termination_condition
